@@ -21,6 +21,7 @@ DATA_DIR=/data
 TMP_FILE=/tmp/mycnf_helper.log
 SERVER_ID=1
 
+
 ## Phase the option
 while getopts "ac:d:i:m:o:p:sv:" opt
 do
@@ -51,6 +52,7 @@ do
     esac
 done
 
+
 ## Make sure the CPU core count is digit
 if [ `echo $CPU_CORE_COUNT | sed -n '/^[1-9][0-9]*$/p'` ]
 then
@@ -59,6 +61,7 @@ else
     echo "Invalid CPU core count, use -c to specify"
     exit 1
 fi
+
 
 ## Make sure the memory capacity is digit
 if [ `echo $MEM_CAP | sed -n '/^[1-9][0-9]*$/p'` ]
@@ -69,6 +72,7 @@ else
     exit 1
 fi
 
+
 ## Make sure the port is digit
 if [ `echo $MY_PORT | sed -n '/^[1-9][0-9]*$/p'` ]
 then
@@ -77,6 +81,7 @@ else
     echo "Invalid port number, use -p to specify"
     exit 1
 fi
+
 
 ## Make sure the server_id is digit
 if [ `echo $SERVER_ID | sed -n '/^[1-9][0-9]*$/p'` ]
@@ -87,23 +92,28 @@ else
     exit 1
 fi
 
-## Check target MySQL Server version
-MYSQL_VERSION=`echo $SERVER_VERSION | sed "s/\.//2g" | sed "s/\./0/g"`
-if [ `echo $MYSQL_VERSION | sed -n '/^[1-9][0-9]*$/p'` ]
+
+## Check MySQL Server version
+if [ `echo $SERVER_VERSION | grep -E '^[0-9]+\.[0-9]+\.[0-9]+$'` ]
 then
+    if [ `echo ${SERVER_VERSION##*.} | wc -L` -eq 1 ]
+    then
+        MYSQL_VERSION=`echo $SERVER_VERSION | sed "s/\./0/g"`
+    else
+        MYSQL_VERSION=`echo $SERVER_VERSION | sed "s/\.//2g" | sed "s/\./0/g"`
+    fi
+
+    if [ $MYSQL_VERSION -lt 50600 ]
+    then
+        echo "MySQL Server version is too old to support, quit"
+        exit 1
+    fi
+
     echo "MySQL Server version: "$SERVER_VERSION\($MYSQL_VERSION\)
 else
     echo "Invalid MySQL Server version, use -v to specify"
-    exit 1
+    exit 1    
 fi
-
-
-##需要考虑小版本号是1位的情况
-if [ `echo $MYSQL_VERSION | sed -n '/^[0-9]*\.[0-9]*\.[0-9]*$/p'` ]
-then
-    
-fi
-
 
 
 ## Check the destination of my.cnf
@@ -129,8 +139,15 @@ else
     fi
 fi
 
-## Check the data directory, must be not exist or empty
+
+## Check the data directory, must be empty or not exist
 DATA_DIR=${DATA_DIR%*/}
+if [ ${DATA_DIR:0:1} != '/' ]
+then
+    echo "Please use absolute path with datadir, quit"
+    exit 1
+fi
+
 if [ -d $DATA_DIR ]
 then
     if [ `find $DATA_DIR -maxdepth 1 | wc -l` -gt 1 ]
@@ -140,6 +157,7 @@ then
     fi
 fi
 echo "MySQL data directory: "$DATA_DIR
+
 
 ## Generate the reference data
 echo @type:common@0@999999@user = mysql > $TMP_FILE
@@ -177,6 +195,7 @@ then
     echo "Done!"
     exit 0
 fi
+
 
 ## Check OS version, installation only for CentOS, Red Hat or Fedora
 if [ `ls -l /etc | grep system-release\  | wc -l` -lt 1 ]
