@@ -1,29 +1,13 @@
 #!/bin/bash
 
-echo '
-Usage:
-======================================================================================
--a: <flag>   Automatically gets CPU core count and memory capacity from current server
--c: <number> Logical CPU core count
--d: <string> datadir
--i: <number> server_id
--m: <number> Memory capacity(Unit: GB)
--o: <string> Destination of MySQL config file(Default: $PWD/my.cnf)
--p: <number> port(Default: 3306)
--s: <flag>   Setup the MySQL Server
--v: <string> MySQL Server version. eg: 5.6.32, 5.7.22, 8.0.18
-======================================================================================
-'
-
 MY_CNF=$PWD/my.cnf
 MY_PORT=3306
 DATA_DIR=/data
 TMP_FILE=/tmp/mycnf_helper.log
 SERVER_ID=1
 
-
 ## Phase the option
-while getopts "ac:d:i:m:o:p:sv:" opt
+while getopts "ac:d:hi:m:o:p:sv:" opt
 do
     case $opt in
         a)
@@ -34,6 +18,20 @@ do
             CPU_CORE_COUNT=$OPTARG;;
         d)
             DATA_DIR=$OPTARG;;
+        h)
+echo '======================================================================================
+-a: <flag>   automatically gets CPU core count and memory capacity from current server
+-c: <number> logical CPU core count
+-d: <string> datadir(default: /data)
+-h: <flag>   print help information
+-i: <number> server_id(default: 1)
+-m: <number> memory capacity(unit: GB)
+-o: <string> destination of MySQL config file(default: $PWD/my.cnf)
+-p: <number> port(default: 3306)
+-s: <flag>   setup the MySQL Server
+-v: <string> MySQL Server version. eg: 5.6.32, 5.7.22, 8.0.1
+======================================================================================'
+            exit 0;;
         i)
             SERVER_ID=$OPTARG;;
         m)
