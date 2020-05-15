@@ -5,9 +5,11 @@ Usage:
 ======================================================================================
 -a: <flag>   Automatically gets CPU core count and memory capacity from current server
 -c: <number> Logical CPU core count
+-d: <string> datadir
+-i: <number> server_id
 -m: <number> Memory capacity(Unit: GB)
 -o: <string> Destination of MySQL config file(Default: $PWD/my.cnf)
--p: <number> Port(Default: 3306)
+-p: <number> port(Default: 3306)
 -s: <flag>   Setup the MySQL Server
 -v: <string> MySQL Server version. eg: 5.6.32, 5.7.22, 8.0.18
 ======================================================================================
@@ -15,9 +17,12 @@ Usage:
 
 MY_CNF=$PWD/my.cnf
 MY_PORT=3306
+DATA_DIR=/data
+TMP_FILE=/tmp/mycnf_helper.log
+SERVER_ID=1
 
-## Phase the argument
-while getopts "ac:m:o:p:sv:" opt
+## Phase the option
+while getopts "ac:d:i:m:o:p:sv:" opt
 do
     case $opt in
         a)
@@ -26,6 +31,10 @@ do
             let MEM_CAP=$MEM_CAP/1024/1024;;
         c)
             CPU_CORE_COUNT=$OPTARG;;
+        d)
+            DATA_DIR=$OPTARG;;
+        i)
+            SERVER_ID=$OPTARG;;
         m)
             MEM_CAP=$OPTARG;;
         o)
@@ -37,7 +46,7 @@ do
         v)
             SERVER_VERSION=$OPTARG;;
         ?)
-            echo "Unknown argument, quit"
+            echo "Unknown option, quit"
             exit 1;;
     esac
 done
@@ -63,9 +72,18 @@ fi
 ## Make sure the port is digit
 if [ `echo $MY_PORT | sed -n '/^[1-9][0-9]*$/p'` ]
 then
-    echo "MySQL Server Port: "$MY_PORT
+    echo "MySQL Server port: "$MY_PORT
 else
     echo "Invalid port number, use -p to specify"
+    exit 1
+fi
+
+## Make sure the server_id is digit
+if [ `echo $SERVER_ID | sed -n '/^[1-9][0-9]*$/p'` ]
+then
+    echo "MySQL Server server_id: "$SERVER_ID
+else
+    echo "Invalid server_id, use -i to specify"
     exit 1
 fi
 
@@ -79,7 +97,22 @@ else
     exit 1
 fi
 
+
+##需要考虑小版本号是1位的情况
+if [ `echo $MYSQL_VERSION | sed -n '/^[0-9]*\.[0-9]*\.[0-9]*$/p'` ]
+then
+    
+fi
+
+
+
 ## Check the destination of my.cnf
+if [ ${MY_CNF:0:1} != '/' ]
+then
+    echo 'Please use absolute path with my.cnf file, quit'
+    exit 1
+fi
+
 if [ -f $MY_CNF ]
 then
     echo $MY_CNF" has already exists, overwriting is not supported"
@@ -92,20 +125,45 @@ else
         exit 1
     else
         ##touch $MY_CNF
-        ##echo "MySQL config file created: "$MY_CNF
-        :
+        echo "MySQL config file will be created: "$MY_CNF
     fi
 fi
 
+## Check the data directory, must be not exist or empty
+DATA_DIR=${DATA_DIR%*/}
+if [ -d $DATA_DIR ]
+then
+    if [ `find $DATA_DIR -maxdepth 1 | wc -l` -gt 1 ]
+    then
+        echo $DATA_DIR "is not empty, quit"
+        exit 1
+    fi
+fi
+echo "MySQL data directory: "$DATA_DIR
 
-
-
-
-
-
-
-
-
+## Generate the reference data
+echo @type:common@0@999999@user = mysql > $TMP_FILE
+echo @type:common@0@999999@port = $MY_PORT >> $TMP_FILE
+echo @type:common@0@999999@server_id = $SERVER_ID >> $TMP_FILE
+echo @type:common@0@999999@basedir = /usr/local/mysql >> $TMP_FILE
+echo @type:common@0@999999@datadir = $DATA_DIR >> $TMP_FILE
+echo @type:common@0@999999@tmpdir = $DATA_DIR/tmp >> $TMP_FILE
+echo @type:common@0@999999@socket = $DATA_DIR/mysql.sock >> $TMP_FILE
+echo @type:common@50715@999999@mysqlx_socket = $DATA_DIR/mysqlx.sock >> $TMP_FILE
+echo @type:common@0@999999@pid_file = $DATA_DIR/mysql.pid >> $TMP_FILE
+echo @type:common@0@999999@autocommit = ON >> $TMP_FILE
+echo @type:common@0@999999@character_set_server = utf8mb4 >> $TMP_FILE
+echo @type:common@0@999999@collation_server = utf8mb4_unicode_ci >> $TMP_FILE
+echo @type:common@0@50719@tx_isolation = READ-COMMITTED >> $TMP_FILE
+echo @type:common@50720@999999@transaction_isolation = READ-COMMITTED >> $TMP_FILE
+echo @type:common@0@999999@lower_case_table_names = 1 >> $TMP_FILE
+echo @type:common@0@999999@sync_binlog = 1 >> $TMP_FILE
+echo @type:common@0@999999@secure_file_priv = $DATA_DIR/tmp >> $TMP_FILE
+echo @type:common@0@999999@log_bin = $DATA_DIR/binlog/bin.log >> $TMP_FILE
+echo @type:common@0@999999@binlog_format = ROW >> $TMP_FILE
+echo @type:common@0@80000@expire_logs_days = 15 >> $TMP_FILE
+echo @type:common@80001@999999@binlog_expire_logs_seconds = 1296000 >> $TMP_FILE
+echo @type:common@50602@999999@binlog_rows_query_log_events = ON >> $TMP_FILE
 
 
 
