@@ -103,7 +103,7 @@ then
 
     if [ $MYSQL_VERSION -lt 50600 ]
     then
-        echo "MySQL Server version is too old to support, quit"
+        echo "MySQL Server version is too old to be supported, quit"
         exit 1
     fi
 
