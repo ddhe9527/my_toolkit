@@ -32,18 +32,18 @@ echo 'mycnf_helper has 2 main functions:
 2): installing MySQL Server(with -s option)
 ===========================================
 Usage:
--a: <flag>   automatically gets CPU core count and memory capacity from current server
+-a:          automatically gets CPU core count and memory capacity from current server
 -c: <number> logical CPU core count
 -d: <string> datadir(default: /mysql_data)
 -f: <string> specify a my.cnf for MySQL Server setup(this file should have mycnf_helper fingerprint)
--h: <flag>   print help information
+-h:          print help information
 -i: <number> server_id(default: 1)
 -I: <number> IO capacity(IOPS) of the storage(default: 4000)
 -m: <number> memory capacity(unit: GB)
 -o: <string> destination of MySQL config file(default: $PWD/my.cnf)
 -p: <number> port(default: 3306)
--s: <flag>   generate a my.cnf file and setup the MySQL Server
--S: <flag>   use SSD storage(for innodb_flush_neighbors)
+-s:          generate a my.cnf file and setup the MySQL Server
+-S:          use SSD storage(for innodb_flush_neighbors)
 -v: <string> MySQL Server version. eg: 5.6.32, 5.7.22, 8.0.1
 '
             exit 0;;
