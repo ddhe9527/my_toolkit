@@ -10,9 +10,10 @@ SSD_FLAG=0
 IO_CAP=4000
 SKIP_GENERATE_MYCNF=0
 DIR_NOT_EMPTY_FLAG=0
+MM_FLAG=0
 
 ## Phase the option
-while getopts "ac:d:f:hi:I:m:o:p:sSv:" opt
+while getopts "ac:d:f:hi:I:m:M:o:p:r:sSv:" opt
 do
     case $opt in
         a)
@@ -40,8 +41,10 @@ Usage:
 -i: <number> server_id(default: 1)
 -I: <number> IO capacity(IOPS) of the storage(default: 4000)
 -m: <number> memory capacity(unit: GB)
+-M: <number> use master-master replication and specify auto_increment_offset(1 or 2)
 -o: <string> destination of MySQL config file(default: $PWD/my.cnf)
 -p: <number> port(default: 3306)
+-r: <string> replication role, must be master or slave
 -s:          generate a my.cnf file and setup the MySQL Server
 -S:          use SSD storage(for innodb_flush_neighbors)
 -v: <string> MySQL Server version. eg: 5.6.32, 5.7.22, 8.0.1
@@ -53,10 +56,15 @@ Usage:
             IO_CAP=$OPTARG;;
         m)
             MEM_CAP=$OPTARG;;
+        M)
+            MM_FLAG=1
+            AUTO_INCREMENT_OFFSET=$OPTARG;;
         o)
             MY_CNF=$OPTARG;;
         p)
             MY_PORT=$OPTARG;;
+        r)
+            REPL_ROLE=$OPTARG;;
         s)
             SETUP_FLAG=1;;
         S)
@@ -119,7 +127,7 @@ then
     ## Make sure the IOPS is digit
     if [ `echo $IO_CAP | sed -n '/^[1-9][0-9]*$/p'` ]
     then
-        echo "IO capacity: "$IO_CAP
+        echo "IO capacity: "$IO_CAP "IOPS"
     else
         echo "Invalid IO capacity, use -I to specify"
         exit 1
@@ -165,6 +173,33 @@ then
             DIR_NOT_EMPTY_FLAG=1
         fi
     fi
+    
+    ## Check replication role
+    if [ `echo $REPL_ROLE | grep -i slave | wc -l` -eq 1 ]
+    then
+        REPL_ROLE=S
+        echo "Replication role: slave"
+    elif [ `echo $REPL_ROLE | grep -i master | wc -l` -eq 1 ]
+    then
+        REPL_ROLE=M
+        echo "Replication role: master"
+    else
+        echo "Replication role must be slave or master, use -r to specify"
+        exit 1
+    fi
+
+    ## Check AUTO_INCREMENT_OFFSET
+    if [ $MM_FLAG -eq 1 ]
+    then
+        if [ $AUTO_INCREMENT_OFFSET -eq 1 ] || [ $AUTO_INCREMENT_OFFSET -eq 2 ]
+        then
+            echo "Master-Master replication is enabled, auto_increment_offset="$AUTO_INCREMENT_OFFSET
+        else
+            echo "Invalid auto_increment_offset, use -M to specify(1 or 2)"
+            exit 1
+        fi
+    fi
+
 else
     if [ -f $F_FILE ]
     then
@@ -192,7 +227,7 @@ then
         MYSQL_VERSION=`echo $SERVER_VERSION | sed "s/\.//2g" | sed "s/\./0/g"`
     fi
 
-    if [ $MYSQL_VERSION -lt 50603 ]
+    if [ $MYSQL_VERSION -lt 50609 ]
     then
         echo "MySQL Server version is too old to be supported, quit"
         exit 1
@@ -333,12 +368,52 @@ then
     echo @type:common@0@999999@innodb_autoinc_lock_mode = 2 >> $TMP_FILE
     echo @type:common@50606@999999@innodb_online_alter_log_max_size = 2G >> $TMP_FILE
     echo @type:common@50604@999999@innodb_sort_buffer_size = 2M >> $TMP_FILE
+
+    ##optional configuration
+    echo @type:common@0@999999@innodb_rollback_on_timeout = ON >> $TMP_FILE
+    echo @type:common@0@999999@skip_name_resolve = ON >> $TMP_FILE
+    echo '@type:common@0@999999@performance_schema_instrument = "wait/lock/metadata/sql/mdl=ON"' >> $TMP_FILE
+
+    ##Replication configuration
+    if [ $REPL_ROLE = "M" ] ##Master
+    then
+        echo @type:replication@0@999999@event_scheduler = ON >> $TMP_FILE
+        echo @type:replication@0@999999@read_only = OFF >> $TMP_FILE
+        echo @type:replication@50708@999999@super_read_only = OFF >> $TMP_FILE
+    else ##Slave
+        echo @type:replication@0@999999@event_scheduler = OFF >> $TMP_FILE
+        echo @type:replication@0@999999@read_only = ON >> $TMP_FILE
+        echo @type:replication@50708@999999@super_read_only = ON >> $TMP_FILE
+    fi
+    ##Turn GTID on
+    echo @type:replication@0@999999@log_slave_updates = ON >> $TMP_FILE
+    echo @type:replication@50605@999999@gtid_mode = ON >> $TMP_FILE
+    echo @type:replication@50609@999999@enforce_gtid_consistency = ON >> $TMP_FILE
+    ##
+    echo @type:replication@0@999999@relay_log = $DATA_DIR/relaylog/relay.log >> $TMP_FILE
+    echo @type:replication@50602@999999@master_info_repository = TABLE >> $TMP_FILE
+    echo @type:replication@50602@999999@relay_log_info_repository = TABLE >> $TMP_FILE
+    echo @type:replication@0@999999@relay_log_recovery = ON >> $TMP_FILE
+    echo @type:replication@0@999999@skip_slave_start = ON >> $TMP_FILE
+
+    ##Semi sync replication
+    echo '@type:semi-replication@0@999999@plugin_load = "rpl_semi_sync_master=semisync_master.so;rpl_semi_sync_slave=semisync_slave.so"' >> $TMP_FILE
+    echo @type:semi-replication@0@999999@rpl_semi_sync_master_enabled = ON >> $TMP_FILE
+    echo @type:semi-replication@0@999999@rpl_semi_sync_slave_enabled = ON >> $TMP_FILE
+    echo @type:semi-replication@0@999999@rpl_semi_sync_master_timeout = 5000 >> $TMP_FILE
     
+    ##Master master replication
+    if [ $MM_FLAG -eq 1 ]
+    then
+        echo @type:mm-replication@0@999999@auto_increment_offset = $AUTO_INCREMENT_OFFSET >> $TMP_FILE
+        echo @type:mm-replication@0@999999@auto_increment_increment = 2 >> $TMP_FILE
+    fi
+
 fi
 
 
 ##DATA_DIR's sub directory
-##data, tmp, binlog, slowlog, redolog, undolog, 
+##data, tmp, binlog, slowlog, redolog, undolog, relaylog
 
 
 if [ $SETUP_FLAG -eq 0 ]
