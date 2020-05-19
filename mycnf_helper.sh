@@ -203,7 +203,7 @@ then
 else
     if [ -f $F_FILE ]
     then
-        if [ `cat $F_FILE | grep mycnf_helper_fingerprint | wc -l` -ne 1 ]
+        if [ `cat $F_FILE | grep mycnf_helper_fingerprint | wc -l` -ne 2 ]
         then
             echo $F_FILE "does not has mycnf_helper fingerprint, quit"
             exit 1
@@ -243,7 +243,7 @@ fi
 ## Generate the reference data
 if [ $SKIP_GENERATE_MYCNF -eq 0 ]
 then
-    echo @type:header@this is a temporary file for mycnf_helper > $TMP_FILE
+    echo @type:header@999999@0@this is a temporary file for mycnf_helper > $TMP_FILE
     echo @type:common@0@999999@user = mysql >> $TMP_FILE
     echo @type:common@0@999999@port = $MY_PORT >> $TMP_FILE
     echo @type:common@0@999999@server_id = $SERVER_ID >> $TMP_FILE
@@ -408,6 +408,17 @@ then
         echo @type:mm-replication@0@999999@auto_increment_offset = $AUTO_INCREMENT_OFFSET >> $TMP_FILE
         echo @type:mm-replication@0@999999@auto_increment_increment = 2 >> $TMP_FILE
     fi
+
+    echo "##This file is created by mycnf_helper for MySQL "$SERVER_VERSION", use at your own risk(mycnf_helper_fingerprint)" > $MY_CNF
+    echo '[mysqld]' >> $MY_CNF
+    while read LINE
+    do
+        if [ $MYSQL_VERSION -ge `echo $LINE | cut -d'@' -f 3` ] && [ $MYSQL_VERSION -le `echo $LINE | cut -d'@' -f 4` ]
+        then
+            echo $LINE | cut -d'@' -f 5 >> $MY_CNF
+        fi
+    done < $TMP_FILE
+    echo "##End(mycnf_helper_fingerprint)" >> $MY_CNF
 
 fi
 
