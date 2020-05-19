@@ -35,7 +35,7 @@ echo 'mycnf_helper has 2 main functions:
 Usage:
 -a:          automatically gets CPU core count and memory capacity from current server
 -c: <number> logical CPU core count
--d: <string> datadir(default: /mysql_data)
+-d: <string> MySQL initial data directory(default: /mysql_data)
 -f: <string> specify a my.cnf for MySQL Server setup(this file should have mycnf_helper fingerprint)
 -h:          print help information
 -i: <number> server_id(default: 1)
@@ -408,7 +408,9 @@ then
         echo @type:mm-replication@0@999999@auto_increment_offset = $AUTO_INCREMENT_OFFSET >> $TMP_FILE
         echo @type:mm-replication@0@999999@auto_increment_increment = 2 >> $TMP_FILE
     fi
-
+    
+    
+    ##Write my.cnf file
     echo "##This file is created by mycnf_helper for MySQL "$SERVER_VERSION", use at your own risk(mycnf_helper_fingerprint)" > $MY_CNF
     echo '[mysqld]' >> $MY_CNF
     while read LINE
@@ -419,12 +421,19 @@ then
         fi
     done < $TMP_FILE
     echo "##End(mycnf_helper_fingerprint)" >> $MY_CNF
-
+else
+    ##Check data directory whether it is empty or not exists
+    DATA_DIR=`cat $F_FILE | grep datadir | sed "s/ //g" | awk -F'[=]' '{print $NF}'`
+    DATA_DIR=${DATA_DIR%*/}
+    DATA_DIR=${DATA_DIR%/*}
+    if [ -d $DATA_DIR ]
+    then
+        if [ `find $DATA_DIR -maxdepth 1 | wc -l` -gt 1 ]
+        then
+            DIR_NOT_EMPTY_FLAG=1
+        fi
+    fi
 fi
-
-
-##DATA_DIR's sub directory
-##data, tmp, binlog, slowlog, redolog, undolog, relaylog
 
 
 if [ $SETUP_FLAG -eq 0 ]
@@ -435,7 +444,7 @@ fi
 
 if [ $DIR_NOT_EMPTY_FLAG -eq 1 ]
 then
-    echo "Installing is forbidden because of no-empty directory for datadir"
+    echo "Installing is forbidden because of no-empty directory for MySQL initial data directory"
     exit 1
 fi
 
@@ -463,3 +472,8 @@ case $OS_INFO in
 esac
 
 echo "OS type: $OS_INFO"
+
+
+
+##DATA_DIR's sub directory
+##data, tmp, binlog, slowlog, redolog, undolog, relaylog
