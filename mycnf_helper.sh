@@ -474,6 +474,82 @@ esac
 echo "OS type: $OS_INFO"
 
 
+## Make sure the installation is operated by root only
+if [ `whoami` != 'root' ]
+then
+    echo "Support root installation only, quit"
+    exit 1
+fi
+
+
+## Phase innodb_buffer_pool_size from my.cnf
+if [ $SKIP_GENERATE_MYCNF -eq 1 ]
+then
+    MY_CNF=$F_FILE
+    BUFFER_POOL=`cat $MY_CNF | grep innodb_buffer_pool_size | grep -v \# | sed "s/ //g" | awk -F'[=]' '{print $NF}'`
+    if [ -z "$BUFFER_POOL" ]
+    then
+        echo "Can not find innodb_buffer_pool_size in "$MY_CNF
+        exit 1
+    fi
+
+    if [ ${BUFFER_POOL:0-1} = 'G' ] || [ ${BUFFER_POOL:0-1} = 'g' ]
+    then
+        BUFFER_POOL=${BUFFER_POOL:0:-1}
+        let BUFFER_POOL=$BUFFER_POOL*1024
+        
+    elif [ ${BUFFER_POOL:0-1} = 'M' ] || [ ${BUFFER_POOL:0-1} = 'm' ]
+    then
+        BUFFER_POOL=${BUFFER_POOL:0:-1}
+    else
+        :
+    fi
+fi
+
+
+## Tune Linux kernel parameter
+if [ `cat /etc/sysctl.conf | grep mycnf_helper_fingerprint | wc -l` -eq 0 ]
+then
+    echo '##The following contents are added by mycnf_helper(mycnf_helper_fingerprint)=============
+net.ipv4.ip_local_port_range = 1024 65535
+net.ipv4.tcp_max_syn_backlog = 65535
+net.ipv4.tcp_tw_reuse = 1
+net.ipv4.tcp_tw_recycle = 1
+net.ipv4.tcp_keepalive_time = 120
+net.ipv4.tcp_keepalive_intvl = 30
+net.ipv4.tcp_keepalive_probes = 3
+net.ipv4.tcp_timestamps = 0
+net.ipv4.tcp_max_orphans = 3276800
+net.ipv4.tcp_fin_timeout = 30
+net.ipv4.tcp_mem = 524288 699050 1048576
+net.core.netdev_max_backlog = 65535
+net.core.somaxconn = 65535
+net.core.wmem_default = 8388608
+net.core.wmem_max = 16777216
+net.core.rmem_default = 8388608
+net.core.rmem_max = 16777216
+kernel.hung_task_timeout_secs = 0
+kernel.core_pattern = /var/log/core.%t
+fs.file-max = 2000000
+vm.swappiness = 1' >> /etc/sysctl.conf
+
+    ##kernel.shmmax=innodb_buffer_pool_size*1.2
+    let SHMMAX=BUFFER_POOL*1024*1024*6/5
+    echo kernel.shmmax = $SHMMAX >> /etc/sysctl.conf
+    echo "##End(mycnf_helper_fingerprint)" >> /etc/sysctl.conf
+
+    #Bring the change into effect
+    echo "---------------------------------------- Finish write sysctl.conf"
+    sysctl -p
+    echo "---------------------------------------- Finish execute sysctl -p"
+fi
+
+## Configure limits.conf
+
+## Turn off the SeLinux and firewall
+
+
+
 
 ##DATA_DIR's sub directory
 ##data, tmp, binlog, slowlog, redolog, undolog, relaylog
