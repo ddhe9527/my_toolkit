@@ -539,9 +539,9 @@ vm.swappiness = 1' >> /etc/sysctl.conf
     echo "##End(mycnf_helper_fingerprint)" >> /etc/sysctl.conf
 
     #Bring the change into effect
-    echo "---------------------------------------- Finish write sysctl.conf"
+    echo "---------------------------------------- Finish writing sysctl.conf"
     sysctl -p
-    echo "---------------------------------------- Finish execute sysctl -p"
+    echo "---------------------------------------- Finish executing sysctl -p"
 fi
 
 ## Configure limits.conf
