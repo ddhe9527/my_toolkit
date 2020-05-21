@@ -472,6 +472,8 @@ else
 fi
 
 OS_INFO=${OS_INFO%% *}
+OS_VER_NUM=`cat /etc/system-release | tr -cd "[0-9]"`
+OS_VER_NUM=${OS_VER_NUM:0:1}
 
 case $OS_INFO in
     Red) 
@@ -484,7 +486,7 @@ case $OS_INFO in
         echo "Unknown OS, quit 2"; exit 1;;
 esac
 
-echo "OS type: $OS_INFO"
+echo "OS type: "$OS_INFO $OS_VER_NUM
 
 
 ## Make sure the installation is operated by root only
@@ -641,9 +643,31 @@ then
 fi
 
 
+## Turn off the SELinux and firewall
+if [ `getenforce` != 'Disabled' ]
+then
+    sed -i "/^SELINUX/d" /etc/selinux/config
+    echo "SELINUX=disabled" >> /etc/selinux/config
+    echo "SELINUXTYPE=targeted" >> /etc/selinux/config
+    echo "Modifying /etc/selinux/config"
+    setenforce 0
+    echo "SELinux is disabled, rebooting OS later is recommanded"
+fi
 
-
-## Turn off the SeLinux and firewall
+if [ $OS_VER_NUM -eq 5 ] || [ $OS_VER_NUM -eq 6 ]
+then
+    chkconfig iptables off
+    chkconfig ip6tables off
+    service iptables stop
+    service ip6tables stop
+elif [ $OS_VER_NUM -eq 7 ] || [ $OS_VER_NUM -eq 8 ]
+then
+    systemctl stop firewalld.service
+    systemctl disable firewalld.service
+else
+    echo "Support OS major version 5 ~ 8 only"
+    exit 1
+fi
 
 
 
