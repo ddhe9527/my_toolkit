@@ -11,9 +11,10 @@ IO_CAP=4000
 SKIP_GENERATE_MYCNF=0
 DIR_NOT_EMPTY_FLAG=0
 MM_FLAG=0
+NTP_FLAG=0
 
 ## Phase the option
-while getopts "ac:d:f:hi:I:m:M:o:p:r:sSv:" opt
+while getopts "ac:d:f:hi:I:m:M:n:o:p:r:sSv:" opt
 do
     case $opt in
         a)
@@ -42,6 +43,7 @@ Usage:
 -I: <number> IO capacity(IOPS) of the storage(default: 4000)
 -m: <number> memory capacity(unit: GB)
 -M: <number> use master-master replication and specify auto_increment_offset(1 or 2)
+-n: <string> NTP Server IP address
 -o: <string> destination of MySQL config file(default: $PWD/my.cnf)
 -p: <number> port(default: 3306)
 -r: <string> replication role, must be master or slave
@@ -59,6 +61,9 @@ Usage:
         M)
             MM_FLAG=1
             AUTO_INCREMENT_OFFSET=$OPTARG;;
+        n)
+            NTP_FLAG=1
+            NTP_SERVER=$OPTARG;;
         o)
             MY_CNF=$OPTARG;;
         p)
@@ -497,6 +502,33 @@ then
 fi
 
 
+## Turn off the SELinux and firewall
+if [ `getenforce` != 'Disabled' ]
+then
+    sed -i "/^SELINUX/d" /etc/selinux/config
+    echo "SELINUX=disabled" >> /etc/selinux/config
+    echo "SELINUXTYPE=targeted" >> /etc/selinux/config
+    echo "Modifying /etc/selinux/config"
+    setenforce 0
+    echo "SELinux is disabled, rebooting OS later is recommanded"
+fi
+
+if [ $OS_VER_NUM -eq 5 ] || [ $OS_VER_NUM -eq 6 ]
+then
+    chkconfig --level 2345 iptables off
+    chkconfig --level 2345 ip6tables off
+    service iptables stop
+    service ip6tables stop
+elif [ $OS_VER_NUM -eq 7 ] || [ $OS_VER_NUM -eq 8 ]
+then
+    systemctl stop firewalld.service
+    systemctl disable firewalld.service
+else
+    echo "Support OS major version 5 ~ 8 only"
+    exit 1
+fi
+
+
 ## Check I/O scheduler, use noop for SSD, deadline for traditional hard disk
 if [ $SKIP_GENERATE_MYCNF -eq 1 ]
 then
@@ -643,33 +675,6 @@ then
 fi
 
 
-## Turn off the SELinux and firewall
-if [ `getenforce` != 'Disabled' ]
-then
-    sed -i "/^SELINUX/d" /etc/selinux/config
-    echo "SELINUX=disabled" >> /etc/selinux/config
-    echo "SELINUXTYPE=targeted" >> /etc/selinux/config
-    echo "Modifying /etc/selinux/config"
-    setenforce 0
-    echo "SELinux is disabled, rebooting OS later is recommanded"
-fi
-
-if [ $OS_VER_NUM -eq 5 ] || [ $OS_VER_NUM -eq 6 ]
-then
-    chkconfig --level 2345 iptables off
-    chkconfig --level 2345 ip6tables off
-    service iptables stop
-    service ip6tables stop
-elif [ $OS_VER_NUM -eq 7 ] || [ $OS_VER_NUM -eq 8 ]
-then
-    systemctl stop firewalld.service
-    systemctl disable firewalld.service
-else
-    echo "Support OS major version 5 ~ 8 only"
-    exit 1
-fi
-
-
 ## Clean up MariaDB if possible
 if [ `rpm -qa | grep mariadb | wc -l` -gt 0 ]
 then
@@ -688,7 +693,7 @@ fi
 
 ## Install necessary packages
 echo "---------------------------------------- Installing necessary packages(start point)"
-yum install -y net-tools libaio libaio-devel numactl-libs autoconf perl-Module*
+yum install -y net-tools libaio libaio-devel numactl-libs autoconf ntp perl-Module*
 if [ $? -eq 1 ]
 then
     echo "Install packeges from yum failed, please check yum configuration first."
@@ -707,6 +712,26 @@ if [ `netstat -tunlp | awk '{print $4}' | grep -E "*:$MY_PORT$" | wc -l` -gt 0 ]
 then
     echo "Port $MY_PORT is occupied, please manually check, quit"
     exit 1
+fi
+
+
+## Configure ntpdate
+if [ $NTP_FLAG -eq 1 ]
+then
+    if [ `cat /var/spool/cron/root | grep ntpdate | wc -l` -eq 0 ]
+    then
+        if [ `echo $NTP_SERVER | grep '^[0-9]\{1,3\}\.[0-9]\{1,3\}\.[0-9]\{1,3\}\.[0-9]\{1,3\}$' | wc -l` -eq 1 ]
+        then
+            echo "0 1 * * * /usr/sbin/ntpdate $NTP_SERVER" >> /var/spool/cron/root
+            echo "Adding ntpdate $NTP_SERVER to root's crontab"
+        else
+            echo "Invalid IP address for NTP server, use -n to specify the right IP, quit"
+            exit 1
+        fi
+    else
+        echo "ntpdate has already configured"
+        crontab -l
+    fi
 fi
 
 
