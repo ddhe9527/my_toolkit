@@ -718,6 +718,13 @@ fi
 ## Configure ntpdate
 if [ $NTP_FLAG -eq 1 ]
 then
+    if [ ! -f /var/spool/cron/root ]
+    then
+        touch /var/spool/cron/root
+        chmod 600 /var/spool/cron/root
+        echo "Creating /var/spool/cron/root"
+    fi
+
     if [ `cat /var/spool/cron/root | grep ntpdate | wc -l` -eq 0 ]
     then
         if [ `echo $NTP_SERVER | grep '^[0-9]\{1,3\}\.[0-9]\{1,3\}\.[0-9]\{1,3\}\.[0-9]\{1,3\}$' | wc -l` -eq 1 ]
