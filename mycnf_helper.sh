@@ -656,8 +656,8 @@ fi
 
 if [ $OS_VER_NUM -eq 5 ] || [ $OS_VER_NUM -eq 6 ]
 then
-    chkconfig iptables off
-    chkconfig ip6tables off
+    chkconfig --level 2345 iptables off
+    chkconfig --level 2345 ip6tables off
     service iptables stop
     service ip6tables stop
 elif [ $OS_VER_NUM -eq 7 ] || [ $OS_VER_NUM -eq 8 ]
@@ -669,6 +669,45 @@ else
     exit 1
 fi
 
+
+## Clean up MariaDB if possible
+if [ `rpm -qa | grep mariadb | wc -l` -gt 0 ]
+then
+    echo "---------------------------------------- Find some MariaDB packages"
+    rpm -qa | grep mariadb
+    
+    if [ `ps -ef | grep mysqld | wc -l` -eq 0 ]
+    then
+        echo "Cleaning up the mariadb packages"
+        rpm -e --nodeps `rpm -qa|grep -i mariadb`
+    else
+        echo "Find running mysqld process, MariaDB packages will not be cleaned up because it's too risk"
+    fi
+fi
+
+
+## Install necessary packages
+echo "---------------------------------------- Installing necessary packages(start point)"
+yum install -y net-tools libaio libaio-devel numactl-libs autoconf perl-Module*
+if [ $? -eq 1 ]
+then
+    echo "Install packeges from yum failed, please check yum configuration first."
+    exit 1
+fi
+echo "---------------------------------------- Installing necessary packages(end point)"
+
+
+## Check network port if occupied
+if [ $SKIP_GENERATE_MYCNF -eq 1 ]
+then
+    MY_PORT=`cat $MY_CNF | grep port | grep -v \# | sed "s/ //g" | awk -F'[=]' '{print $NF}'`
+fi
+
+if [ `netstat -tunlp | awk '{print $4}' | grep -E "*:$MY_PORT$" | wc -l` -gt 0 ]
+then
+    echo "Port $MY_PORT is occupied, please manually check, quit"
+    exit 1
+fi
 
 
 
