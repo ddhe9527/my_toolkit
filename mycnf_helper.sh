@@ -306,7 +306,9 @@ then
     echo @type:common@50602@999999@innodb_stats_persistent_sample_pages = 128 >> $TMP_FILE
     ##innodb_buffer_pool_size
     let BUFFER_POOL=$MEM_CAP*1024*7/10
-    echo @type:common@0@999999@innodb_buffer_pool_size = ${BUFFER_POOL:0:-2}00M >> $TMP_FILE
+    let BPL=${#BUFFER_POOL}
+    let BPL=BPL-2
+    echo @type:common@0@999999@innodb_buffer_pool_size = ${BUFFER_POOL:0:$BPL}00M >> $TMP_FILE
     ##innodb_buffer_pool_instances
     let BUFFER_POOL_INSTANCE=$MEM_CAP/2
     if [ $BUFFER_POOL_INSTANCE -lt 8 ]
@@ -436,6 +438,17 @@ else
 fi
 
 
+##Check my.cnf file agein, make sure it is complete
+if [ $SKIP_GENERATE_MYCNF -eq 0 ]
+then
+    if [ `cat $MY_CNF | grep mycnf_helper_fingerprint | wc -l` -ne 2 ]
+    then
+        echo $MY_CNF "is broken, quit"
+        exit 1
+    fi
+fi
+
+
 if [ $SETUP_FLAG -eq 0 ]
 then
     echo "Done!"
@@ -482,6 +495,42 @@ then
 fi
 
 
+## Check I/O scheduler, use noop for SSD, deadline for traditional hard disk
+if [ $SKIP_GENERATE_MYCNF -eq 1 ]
+then
+    INNODB_FLUSH_NEIGHBORS=`cat $MY_CNF | grep innodb_flush_neighbors | grep -v \# | sed "s/ //g" | awk -F'[=]' '{print $NF}'`
+    if [ -z "$INNODB_FLUSH_NEIGHBORS" ]
+    then
+        echo "Can not find innodb_flush_neighbors in "$MY_CNF
+        exit 1
+    fi
+
+    if [ $INNODB_FLUSH_NEIGHBORS -eq 1 ]
+    then
+        SSD_FLAG=0
+    else
+        SSD_FLAG=1
+    fi
+fi
+
+DEFAULT_IO_SCHEDULER=`dmesg | grep -i scheduler | grep default`
+if [ $SSD_FLAG -eq 1 ] && [ `echo $DEFAULT_IO_SCHEDULER | grep noop | wc -l` -eq 0 ]
+then
+    echo "If you use SSD storage, please set innodb_flush_neighbors=0(current value) and I/O scheduler to noop."
+    echo "If you use traditional hard disk storage, please set innodb_flush_neighbors=1 and I/O scheduler to deadline."
+    echo "use 'dmesg | grep -i scheduler' command to check your default I/O scheduler."
+    exit 1
+elif [ $SSD_FLAG -eq 0 ] && [ `echo $DEFAULT_IO_SCHEDULER | grep deadline | wc -l` -eq 0 ]
+then
+    echo "If you use SSD storage, please set innodb_flush_neighbors=0 and I/O scheduler to noop."
+    echo "If you use traditional hard disk storage, please set innodb_flush_neighbors=1(current value) and I/O scheduler to deadline."
+    echo "use 'dmesg | grep -i scheduler' command to check your default I/O scheduler."
+    exit 1
+else
+    echo "Check I/O scheduler:" $DEFAULT_IO_SCHEDULER
+fi
+
+
 ## Phase innodb_buffer_pool_size from my.cnf
 if [ $SKIP_GENERATE_MYCNF -eq 1 ]
 then
@@ -495,12 +544,16 @@ then
 
     if [ ${BUFFER_POOL:0-1} = 'G' ] || [ ${BUFFER_POOL:0-1} = 'g' ]
     then
-        BUFFER_POOL=${BUFFER_POOL:0:-1}
+        let BPL=${#BUFFER_POOL}
+        let BPL=BPL-1
+        BUFFER_POOL=${BUFFER_POOL:0:$BPL}
         let BUFFER_POOL=$BUFFER_POOL*1024
         
     elif [ ${BUFFER_POOL:0-1} = 'M' ] || [ ${BUFFER_POOL:0-1} = 'm' ]
     then
-        BUFFER_POOL=${BUFFER_POOL:0:-1}
+        let BPL=${#BUFFER_POOL}
+        let BPL=BPL-1
+        BUFFER_POOL=${BUFFER_POOL:0:$BPL}
     else
         :
     fi
@@ -544,7 +597,51 @@ vm.swappiness = 1' >> /etc/sysctl.conf
     echo "---------------------------------------- Finish executing sysctl -p"
 fi
 
-## Configure limits.conf
+
+## Configure OS limits
+if [ `cat /etc/security/limits.conf | grep -v ^# | grep -v ^$ | grep mysql | wc -l` -gt 0 ]
+then
+    if [ `cat /etc/security/limits.conf | grep mycnf_helper_fingerprint | wc -l` -eq 0 ]
+    then
+        sed -i "s/^mysql/#&/g" /etc/security/limits.conf
+        echo "modifying /etc/security/limits.conf"
+    fi
+fi
+
+if [ `cat /etc/security/limits.conf | grep mycnf_helper_fingerprint | wc -l` -eq 0 ]
+then
+    echo '##The following contents are added by mycnf_helper(mycnf_helper_fingerprint)=============
+mysql soft nofile 65535
+mysql hard nofile 65535
+mysql soft nproc 65535
+mysql hard nproc 65535
+##End(mycnf_helper_fingerprint)' >> /etc/security/limits.conf
+    echo "writing /etc/security/limits.conf"
+fi
+
+NPROC_CONF_CNT=`ls -l /etc/security/limits.d | grep nproc.conf | wc -l`
+if [ $NPROC_CONF_CNT -gt 0 ]
+then
+    if [ $NPROC_CONF_CNT -eq 1 ]
+    then
+        NPROC_CONF=`ls /etc/security/limits.d | grep nproc.conf`
+        sed -i "/^*/d" /etc/security/limits.d/$NPROC_CONF
+        echo "*          soft    nproc     65535" >> /etc/security/limits.d/$NPROC_CONF
+        echo "writing /etc/security/limits.d/"$NPROC_CONF
+    else
+        echo "mycnf_helper is confused because nproc.conf in /etc/security/limits.d directory is not unique"
+        exit 1
+    fi
+fi
+
+if [ `cat /etc/pam.d/login | grep pam_limits.so | wc -l` -eq 0 ]
+then
+    echo "session    required    pam_limits.so" >> /etc/pam.d/login
+    echo "Writing /etc/pam.d/login"
+fi
+
+
+
 
 ## Turn off the SeLinux and firewall
 
