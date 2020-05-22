@@ -594,22 +594,25 @@ then
         SSD_FLAG=1
     fi
 fi
-
-DEFAULT_IO_SCHEDULER=`dmesg | grep -i scheduler | grep default`
-if [ $SSD_FLAG -eq 1 ] && [ `echo $DEFAULT_IO_SCHEDULER | grep noop | wc -l` -eq 0 ]
+## Skip default I/O scheduler in RHEL/CentOS 8 temporarily
+if [ $OS_VER_NUM -lt 8 ]
 then
-    echo "If you use SSD storage, please set innodb_flush_neighbors=0(current value) and I/O scheduler to noop."
-    echo "If you use traditional hard disk storage, please set innodb_flush_neighbors=1 and I/O scheduler to deadline."
-    echo "use 'dmesg | grep -i scheduler' command to check your default I/O scheduler."
-    exit 1
-elif [ $SSD_FLAG -eq 0 ] && [ `echo $DEFAULT_IO_SCHEDULER | grep deadline | wc -l` -eq 0 ]
-then
-    echo "If you use SSD storage, please set innodb_flush_neighbors=0 and I/O scheduler to noop."
-    echo "If you use traditional hard disk storage, please set innodb_flush_neighbors=1(current value) and I/O scheduler to deadline."
-    echo "use 'dmesg | grep -i scheduler' command to check your default I/O scheduler."
-    exit 1
-else
-    echo "Check I/O scheduler:" $DEFAULT_IO_SCHEDULER
+    DEFAULT_IO_SCHEDULER=`dmesg | grep -i scheduler | grep default`
+    if [ $SSD_FLAG -eq 1 ] && [ `echo $DEFAULT_IO_SCHEDULER | grep noop | wc -l` -eq 0 ]
+    then
+        echo "If you use SSD storage, please set innodb_flush_neighbors=0(current value) and I/O scheduler to noop."
+        echo "If you use traditional hard disk storage, please set innodb_flush_neighbors=1 and I/O scheduler to deadline."
+        echo "use 'dmesg | grep -i scheduler' command to check your default I/O scheduler."
+        exit 1
+    elif [ $SSD_FLAG -eq 0 ] && [ `echo $DEFAULT_IO_SCHEDULER | grep deadline | wc -l` -eq 0 ]
+    then
+        echo "If you use SSD storage, please set innodb_flush_neighbors=0 and I/O scheduler to noop."
+        echo "If you use traditional hard disk storage, please set innodb_flush_neighbors=1(current value) and I/O scheduler to deadline."
+        echo "use 'dmesg | grep -i scheduler' command to check your default I/O scheduler."
+        exit 1
+    else
+        echo "Check I/O scheduler:" $DEFAULT_IO_SCHEDULER
+    fi
 fi
 
 
