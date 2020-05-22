@@ -503,13 +503,13 @@ fi
 
 if [ $DATADIR_NOT_EMPTY_FLAG -eq 1 ]
 then
-    echo "Installing is forbidden because of no-empty directory for MySQL initial data directory"
+    echo "Installation is forbidden because of no-empty directory for MySQL initial data directory"
     exit 1
 fi
 
 if [ $BASEDIR_NOT_EMPTY_FLAG -eq 1 ]
 then
-    echo "Installing is forbidden because of no-empty directory for MySQL base directory"
+    echo "Installation is forbidden because of no-empty directory for MySQL base directory"
     exit 1
 fi
 
@@ -579,6 +579,7 @@ fi
 ## Check I/O scheduler, use noop for SSD, deadline for traditional hard disk
 if [ $SKIP_GENERATE_MYCNF -eq 1 ]
 then
+    MY_CNF=$F_FILE
     INNODB_FLUSH_NEIGHBORS=`cat $MY_CNF | grep innodb_flush_neighbors | grep -v \# | sed "s/ //g" | awk -F'[=]' '{print $NF}'`
     if [ -z "$INNODB_FLUSH_NEIGHBORS" ]
     then
@@ -615,7 +616,6 @@ fi
 ## Phase innodb_buffer_pool_size from my.cnf
 if [ $SKIP_GENERATE_MYCNF -eq 1 ]
 then
-    MY_CNF=$F_FILE
     BUFFER_POOL=`cat $MY_CNF | grep innodb_buffer_pool_size | grep -v \# | sed "s/ //g" | awk -F'[=]' '{print $NF}'`
     if [ -z "$BUFFER_POOL" ]
     then
