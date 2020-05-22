@@ -55,7 +55,11 @@ Usage:
 -s:          generate a my.cnf file and setup the MySQL Server
 -S:          use SSD storage(for innodb_flush_neighbors)
 -v: <string> MySQL Server version. eg: 5.6.32, 5.7.22, 8.0.1
-'
+===========================================
+Github: https://github.com/ddhe9527/my_toolkit
+Email:  heduoduo321@163.com
+
+Use this script at your own risk~'
             exit 0;;
         i)
             SERVER_ID=$OPTARG;;
@@ -638,7 +642,7 @@ fi
 ## Tune Linux kernel parameter
 if [ `cat /etc/sysctl.conf | grep mycnf_helper_fingerprint | wc -l` -eq 0 ]
 then
-    echo '##The following contents are added by mycnf_helper(mycnf_helper_fingerprint)=============
+    echo '##The following contents are added by mycnf_helper(mycnf_helper_fingerprint)
 net.ipv4.ip_local_port_range = 1024 65535
 net.ipv4.tcp_max_syn_backlog = 65535
 net.ipv4.tcp_tw_reuse = 1
@@ -691,7 +695,7 @@ fi
 
 if [ `cat /etc/security/limits.conf | grep mycnf_helper_fingerprint | wc -l` -eq 0 ]
 then
-    echo '##The following contents are added by mycnf_helper(mycnf_helper_fingerprint)=============
+    echo '##The following contents are added by mycnf_helper(mycnf_helper_fingerprint)
 mysql soft nofile 65535
 mysql hard nofile 65535
 mysql soft nproc 65535
