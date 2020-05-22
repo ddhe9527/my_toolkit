@@ -33,10 +33,11 @@ do
             F_FILE=$OPTARG
             SKIP_GENERATE_MYCNF=1;;
         h)
-echo 'mycnf_helper has 2 main functions:
+echo '
+mycnf_helper has 2 main functions:
 1): generating a my.cnf for MySQL Server with specific version(default behavior)
 2): installing MySQL Server(with -s option)
-===========================================
+=====================================================================================================
 Usage:
 -a:          automatically gets CPU core count and memory capacity from current server
 -b: <string> MySQL Server base directory(default: /usr/local/mysql)
@@ -55,11 +56,12 @@ Usage:
 -s:          generate a my.cnf file and setup the MySQL Server
 -S:          use SSD storage(for innodb_flush_neighbors)
 -v: <string> MySQL Server version. eg: 5.6.32, 5.7.22, 8.0.1
-===========================================
+=====================================================================================================
 Github: https://github.com/ddhe9527/my_toolkit
 Email:  heduoduo321@163.com
 
-Use this script at your own risk~'
+Use this script at your own risk~
+'
             exit 0;;
         i)
             SERVER_ID=$OPTARG;;
