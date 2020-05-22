@@ -3,24 +3,28 @@
 MY_CNF=$PWD/my.cnf
 MY_PORT=3306
 DATA_DIR=/mysql_data
+BASE_DIR=/usr/local/mysql
 TMP_FILE=/tmp/mycnf_helper.log
 SETUP_FLAG=0
 SERVER_ID=1
 SSD_FLAG=0
 IO_CAP=4000
 SKIP_GENERATE_MYCNF=0
-DIR_NOT_EMPTY_FLAG=0
+DATADIR_NOT_EMPTY_FLAG=0
+BASEDIR_NOT_EMPTY_FLAG=0
 MM_FLAG=0
 NTP_FLAG=0
 
 ## Phase the option
-while getopts "ac:d:f:hi:I:m:M:n:o:p:r:sSv:" opt
+while getopts "ab:c:d:f:hi:I:m:M:n:o:p:r:sSv:" opt
 do
     case $opt in
         a)
             CPU_CORE_COUNT=`cat /proc/cpuinfo| grep "processor"| wc -l`
             MEM_CAP=`cat /proc/meminfo | grep MemTotal | awk '{print $2}'`
             let MEM_CAP=$MEM_CAP/1024/1024;;
+        b)
+            BASE_DIR=$OPTARG;;
         c)
             CPU_CORE_COUNT=$OPTARG;;
         d)
@@ -35,6 +39,7 @@ echo 'mycnf_helper has 2 main functions:
 ===========================================
 Usage:
 -a:          automatically gets CPU core count and memory capacity from current server
+-b: <string> MySQL Server base directory(default: /usr/local/mysql)
 -c: <number> logical CPU core count
 -d: <string> MySQL initial data directory(default: /mysql_data)
 -f: <string> specify a my.cnf for MySQL Server setup(this file should have mycnf_helper fingerprint)
@@ -168,17 +173,35 @@ then
         echo "Please use absolute path for datadir, quit"
         exit 1
     fi
-    
+
     echo "MySQL data directory: "$DATA_DIR
     if [ -d $DATA_DIR ]
     then
         if [ `find $DATA_DIR -maxdepth 1 | wc -l` -gt 1 ]
         then
             echo "Be carefull, "$DATA_DIR "is not empty"
-            DIR_NOT_EMPTY_FLAG=1
+            DATADIR_NOT_EMPTY_FLAG=1
         fi
     fi
-    
+
+    ## Check the base directory, must be empty or not exist
+    BASE_DIR=${BASE_DIR%*/}
+    if [ ${BASE_DIR:0:1} != '/' ]
+    then
+        echo "Please use absolute path for basedir, quit"
+        exit 1
+    fi
+
+    echo "MySQL base directory: "$BASE_DIR
+    if [ -d $BASE_DIR ]
+    then
+        if [ `find $BASE_DIR -maxdepth 1 | wc -l` -gt 1 ]
+        then
+            echo "Be carefull, "$BASE_DIR "is not empty"
+            BASEDIR_NOT_EMPTY_FLAG=1
+        fi
+    fi
+
     ## Check replication role
     if [ `echo $REPL_ROLE | grep -i slave | wc -l` -eq 1 ]
     then
@@ -252,7 +275,7 @@ then
     echo @type:common@0@999999@user = mysql >> $TMP_FILE
     echo @type:common@0@999999@port = $MY_PORT >> $TMP_FILE
     echo @type:common@0@999999@server_id = $SERVER_ID >> $TMP_FILE
-    echo @type:common@0@999999@basedir = /usr/local/mysql >> $TMP_FILE
+    echo @type:common@0@999999@basedir = $BASE_DIR >> $TMP_FILE
     echo @type:common@0@999999@datadir = $DATA_DIR/data >> $TMP_FILE
     echo @type:common@0@999999@tmpdir = $DATA_DIR/tmp >> $TMP_FILE
     echo @type:common@0@999999@socket = $DATA_DIR/mysql.sock >> $TMP_FILE
@@ -437,7 +460,19 @@ else
     then
         if [ `find $DATA_DIR -maxdepth 1 | wc -l` -gt 1 ]
         then
-            DIR_NOT_EMPTY_FLAG=1
+            DATADIR_NOT_EMPTY_FLAG=1
+        fi
+    fi
+
+    ##Check base directory whether it is empty or not exists
+    BASE_DIR=`cat $F_FILE | grep basedir | sed "s/ //g" | awk -F'[=]' '{print $NF}'`
+    BASE_DIR=${BASE_DIR%*/}
+    BASE_DIR=${BASE_DIR%/*}
+    if [ -d $BASE_DIR ]
+    then
+        if [ `find $BASE_DIR -maxdepth 1 | wc -l` -gt 1 ]
+        then
+            BASEDIR_NOT_EMPTY_FLAG=1
         fi
     fi
 fi
@@ -460,9 +495,15 @@ then
     exit 0
 fi
 
-if [ $DIR_NOT_EMPTY_FLAG -eq 1 ]
+if [ $DATADIR_NOT_EMPTY_FLAG -eq 1 ]
 then
     echo "Installing is forbidden because of no-empty directory for MySQL initial data directory"
+    exit 1
+fi
+
+if [ $BASEDIR_NOT_EMPTY_FLAG -eq 1 ]
+then
+    echo "Installing is forbidden because of no-empty directory for MySQL base directory"
     exit 1
 fi
 
@@ -626,9 +667,15 @@ vm.swappiness = 1' >> /etc/sysctl.conf
     echo "##End(mycnf_helper_fingerprint)" >> /etc/sysctl.conf
 
     #Bring the change into effect
-    echo "---------------------------------------- Finish writing sysctl.conf"
-    sysctl -p
-    echo "---------------------------------------- Finish executing sysctl -p"
+    echo "Finish writing sysctl.conf"
+    sysctl -p 1>/dev/null 2>&1
+    if [ $? -eq 0 ]
+    then
+        echo "Finish executing sysctl -p"
+    else
+        echo "Executing 'sysctl -p' failed, quit"
+        exit 1
+    fi
 fi
 
 
@@ -650,7 +697,7 @@ mysql hard nofile 65535
 mysql soft nproc 65535
 mysql hard nproc 65535
 ##End(mycnf_helper_fingerprint)' >> /etc/security/limits.conf
-    echo "writing /etc/security/limits.conf"
+    echo "Writing /etc/security/limits.conf"
 fi
 
 NPROC_CONF_CNT=`ls -l /etc/security/limits.d | grep nproc.conf | wc -l`
@@ -661,7 +708,7 @@ then
         NPROC_CONF=`ls /etc/security/limits.d | grep nproc.conf`
         sed -i "/^*/d" /etc/security/limits.d/$NPROC_CONF
         echo "*          soft    nproc     65535" >> /etc/security/limits.d/$NPROC_CONF
-        echo "writing /etc/security/limits.d/"$NPROC_CONF
+        echo "Writing /etc/security/limits.d/"$NPROC_CONF
     else
         echo "mycnf_helper is confused because nproc.conf in /etc/security/limits.d directory is not unique"
         exit 1
@@ -681,25 +728,26 @@ then
     echo "---------------------------------------- Find some MariaDB packages"
     rpm -qa | grep mariadb
     
-    if [ `ps -ef | grep mysqld | wc -l` -eq 0 ]
+    if [ `ps -ef | grep mysqld | grep -v grep | wc -l` -eq 0 ]
     then
         echo "Cleaning up the mariadb packages"
         rpm -e --nodeps `rpm -qa|grep -i mariadb`
     else
         echo "Find running mysqld process, MariaDB packages will not be cleaned up because it's too risk"
     fi
+    echo "---------------------------------------- End line"
 fi
 
 
 ## Install necessary packages
-echo "---------------------------------------- Installing necessary packages(start point)"
-yum install -y net-tools libaio libaio-devel numactl-libs autoconf ntp perl-Module*
+echo "Installing necessary packages..."
+yum install -y net-tools libaio libaio-devel numactl-libs autoconf ntp perl-Module* 1>/dev/null 2>&1
 if [ $? -eq 1 ]
 then
     echo "Install packeges from yum failed, please check yum configuration first."
     exit 1
 fi
-echo "---------------------------------------- Installing necessary packages(end point)"
+echo "Finish installing necessary packages..."
 
 
 ## Check network port if occupied
@@ -740,6 +788,53 @@ then
         crontab -l
     fi
 fi
+
+
+## Create group and user
+if [ `cat /etc/group | grep mysql: | wc -l` -eq 0 ]
+then
+    echo "Creating group mysql"
+    groupadd mysql
+    if [ $? -ne 0 ]
+    then
+        echo "Create group 'mysql' failed, quit"
+        exit 1
+    fi
+fi
+
+if [ `cat /etc/passwd | grep mysql: | wc -l` -eq 0 ]
+then
+    echo "Creating user mysql"
+    useradd -r -g mysql -s /bin/false mysql
+    if [ $? -ne 0 ]
+    then
+        echo "Create user 'mysql' failed, quit"
+        exit 1
+    fi
+fi
+
+
+## Check mysql-X.X.X*.tar.* in current directory
+if [ `ls -l | grep mysql-$SERVER_VERSION-linux-glibc | wc -l` -eq 1 ]
+then
+    MYSQL_PACKAGE=`ls | grep mysql-$SERVER_VERSION-linux-glibc`
+    MYSQL_PACKAGE=$PWD/$MYSQL_PACKAGE
+    echo "Find $MYSQL_PACKAGE for installation"
+else
+    echo "Can not find unique mysql-$SERVER_VERSION-linux-glibc archive.tar in current directory, quit"
+    exit 1
+fi
+
+
+## Configure root's .bash_profile
+if [ `cat ~/.bash_profile | grep $BASE_DIR/bin | grep PATH | wc -l` -eq 0 ]
+then
+    echo "Writing root's .bash_profile"
+    echo "export PATH=\$PATH:$BASE_DIR/bin" >> ~/.bash_profile
+    source ~/.bash_profile
+fi
+
+
 
 
 
