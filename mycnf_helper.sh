@@ -594,7 +594,7 @@ then
         SSD_FLAG=1
     fi
 fi
-## Skip default I/O scheduler in RHEL/CentOS 8 temporarily
+## Skip checking I/O scheduler in RHEL/CentOS 8 temporarily
 if [ $OS_VER_NUM -lt 8 ]
 then
     DEFAULT_IO_SCHEDULER=`dmesg | grep -i scheduler | grep default`
