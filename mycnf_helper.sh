@@ -49,7 +49,7 @@ Usage:
 -I: <number> IO capacity(IOPS) of the storage(default: 4000)
 -m: <number> memory capacity(unit: GB)
 -M: <number> use master-master replication and specify auto_increment_offset(1 or 2)
--n: <string> NTP Server IP address
+-n: <string> NTP server IP address
 -o: <string> destination of MySQL config file(default: $PWD/my.cnf)
 -p: <number> port(default: 3306)
 -r: <string> replication role, must be master or slave
