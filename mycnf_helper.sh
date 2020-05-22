@@ -517,15 +517,22 @@ fi
 ## Check OS version, installation only for CentOS, Red Hat or Fedora
 if [ `ls -l /etc | grep system-release\  | wc -l` -lt 1 ]
 then
-    echo "Unknown OS, quit 1"
-    exit 1
+    if [ `ls -l /etc | grep redhat-release | wc -l` -eq 1 ]
+    then
+        OS_INFO=`cat /etc/redhat-release`
+        OS_INFO=${OS_INFO%% *}
+        OS_VER_NUM=`cat /etc/redhat-release | tr -cd "[0-9]"`
+        OS_VER_NUM=${OS_VER_NUM:0:1}
+    else
+        echo "Unknown OS, quit 1"
+        exit 1
+    fi
 else
     OS_INFO=`cat /etc/system-release`
+    OS_INFO=${OS_INFO%% *}
+    OS_VER_NUM=`cat /etc/system-release | tr -cd "[0-9]"`
+    OS_VER_NUM=${OS_VER_NUM:0:1}
 fi
-
-OS_INFO=${OS_INFO%% *}
-OS_VER_NUM=`cat /etc/system-release | tr -cd "[0-9]"`
-OS_VER_NUM=${OS_VER_NUM:0:1}
 
 case $OS_INFO in
     Red) 
