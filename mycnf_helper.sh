@@ -1,14 +1,14 @@
 #!/bin/bash
 
 MY_CNF=$PWD/my.cnf
-MY_PORT=3306
 DATA_DIR=/mysql_data
 BASE_DIR=/usr/local/mysql
 TMP_FILE=/tmp/mycnf_helper.log
-SETUP_FLAG=0
-SERVER_ID=1
-SSD_FLAG=0
+MY_PORT=3306
 IO_CAP=4000
+SERVER_ID=1
+SETUP_FLAG=0
+SSD_FLAG=0
 SKIP_GENERATE_MYCNF=0
 DATADIR_NOT_EMPTY_FLAG=0
 BASEDIR_NOT_EMPTY_FLAG=0
@@ -657,8 +657,6 @@ then
     echo '##The following contents are added by mycnf_helper(mycnf_helper_fingerprint)
 net.ipv4.ip_local_port_range = 1024 65535
 net.ipv4.tcp_max_syn_backlog = 65535
-net.ipv4.tcp_tw_reuse = 1
-net.ipv4.tcp_tw_recycle = 1
 net.ipv4.tcp_keepalive_time = 120
 net.ipv4.tcp_keepalive_intvl = 30
 net.ipv4.tcp_keepalive_probes = 3
