@@ -473,7 +473,6 @@ else
     ##Check base directory whether it is empty or not exists
     BASE_DIR=`cat $F_FILE | grep basedir | sed "s/ //g" | awk -F'[=]' '{print $NF}'`
     BASE_DIR=${BASE_DIR%*/}
-    BASE_DIR=${BASE_DIR%/*}
     if [ -d $BASE_DIR ]
     then
         if [ `find $BASE_DIR -maxdepth 1 | wc -l` -gt 1 ]
@@ -755,7 +754,12 @@ fi
 
 ## Install necessary packages
 echo "Installing necessary packages..."
-yum install -y net-tools libaio libaio-devel numactl-libs autoconf ntp perl-Module* 1>/dev/null 2>&1
+if [ $OS_VER_NUM -lt 8 ]
+then
+    yum install -y net-tools libaio libaio-devel numactl-libs autoconf ntp perl-Module* 1>/dev/null 2>&1
+else
+    yum install -y net-tools libaio libaio-devel numactl-libs autoconf perl-Module* 1>/dev/null 2>&1
+fi
 if [ $? -eq 1 ]
 then
     echo "Install packeges from yum failed, please check yum configuration first."
@@ -780,26 +784,43 @@ fi
 ## Configure ntpdate
 if [ $NTP_FLAG -eq 1 ]
 then
-    if [ ! -f /var/spool/cron/root ]
+    ## Check IP address format
+    if [ `echo $NTP_SERVER | grep '^[0-9]\{1,3\}\.[0-9]\{1,3\}\.[0-9]\{1,3\}\.[0-9]\{1,3\}$' | wc -l` -eq 0 ]
     then
-        touch /var/spool/cron/root
-        chmod 600 /var/spool/cron/root
-        echo "Creating /var/spool/cron/root"
+        echo "Invalid IP address for NTP server, use -n to specify the right IP, quit"
+        exit 1
     fi
 
-    if [ `cat /var/spool/cron/root | grep ntpdate | wc -l` -eq 0 ]
+    if [ $OS_VER_NUM -lt 8 ] ## For CentOS/RHEL 5/6/7, use ntpdate
     then
-        if [ `echo $NTP_SERVER | grep '^[0-9]\{1,3\}\.[0-9]\{1,3\}\.[0-9]\{1,3\}\.[0-9]\{1,3\}$' | wc -l` -eq 1 ]
+        ## Create /var/spool/cron/root if not exists
+        if [ ! -f /var/spool/cron/root ]
+        then
+            touch /var/spool/cron/root
+            chmod 600 /var/spool/cron/root
+            echo "Creating /var/spool/cron/root"
+        fi
+
+        if [ `cat /var/spool/cron/root | grep ntpdate | wc -l` -eq 0 ]
         then
             echo "0 1 * * * /usr/sbin/ntpdate $NTP_SERVER" >> /var/spool/cron/root
             echo "Adding ntpdate $NTP_SERVER to root's crontab"
         else
-            echo "Invalid IP address for NTP server, use -n to specify the right IP, quit"
-            exit 1
+            echo "ntpdate has already configured"
+            crontab -l
         fi
-    else
-        echo "ntpdate has already configured"
-        crontab -l
+    else ## For CentOS/RHEL 8, use chronyd
+        if [ `cat /etc/chrony.conf | grep -v ^# | grep -v ^$ | grep ^pool | grep $NTP_SERVER | wc -l` -eq 0 ]
+        then
+            echo "Writing /etc/chrony.conf"
+            sed -i "/^pool/d" /etc/chrony.conf
+            echo "pool $NTP_SERVER" >> /etc/chrony.conf
+
+            echo "Restarting chronyd"
+            systemctl stop chronyd
+            systemctl start chronyd
+            systemctl enable chronyd
+        fi
     fi
 fi
 
@@ -850,7 +871,8 @@ fi
 
 
 
-
-
+##mount /dev/cdrom /mnt
+##touch mysql-5.7.29-linux-glibc2.12-x86_64.tar.gz
+##./test.sh -c 8 -m 16 -i 2 -I 50000 -n 192.168.0.1 -p 3307 -r master -s -v 5.7.29 -b /usr/local/mysql1 -d /dbdata -M 2
 ##DATA_DIR's sub directory
 ##data, tmp, binlog, slowlog, redolog, undolog, relaylog
