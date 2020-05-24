@@ -735,7 +735,7 @@ then
         echo "Cleaning up the mariadb packages"
         rpm -e --nodeps `rpm -qa|grep -i mariadb`
     else
-        echo "Find running mysqld process, MariaDB packages will not be cleaned up because it's too risk"
+        echo "Find running mysqld process, MariaDB packages will not be cleaned up because it's too risky"
     fi
     echo "---------------------------------------- End line"
 fi
