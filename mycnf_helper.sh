@@ -513,24 +513,16 @@ then
 fi
 
 
-## Check OS version, installation only for CentOS, Red Hat or Fedora
-if [ `ls -l /etc | grep system-release\  | wc -l` -lt 1 ]
+## Check OS version, installation only for CentOS and Red Hat
+if [ `ls -l /etc | grep redhat-release | wc -l` -gt 0 ]
 then
-    if [ `ls -l /etc | grep redhat-release | wc -l` -eq 1 ]
-    then
-        OS_INFO=`cat /etc/redhat-release`
-        OS_INFO=${OS_INFO%% *}
-        OS_VER_NUM=`cat /etc/redhat-release | tr -cd "[0-9]"`
-        OS_VER_NUM=${OS_VER_NUM:0:1}
-    else
-        echo "Unknown OS, quit 1"
-        exit 1
-    fi
-else
-    OS_INFO=`cat /etc/system-release`
+    OS_INFO=`cat /etc/redhat-release`
+    OS_VER_NUM=${OS_INFO%%.*}
     OS_INFO=${OS_INFO%% *}
-    OS_VER_NUM=`cat /etc/system-release | tr -cd "[0-9]"`
-    OS_VER_NUM=${OS_VER_NUM:0:1}
+    OS_VER_NUM=`echo $OS_VER_NUM | tr -cd "[0-9]"`
+else
+    echo "Unknown OS, quit 1"
+    exit 1
 fi
 
 case $OS_INFO in
@@ -538,12 +530,9 @@ case $OS_INFO in
         OS_INFO='RHEL';;
     CentOS) 
         OS_INFO='CentOS';;
-    ##Fedora) 
-        ##OS_INFO='Fedora';;
     *) 
-        echo "Unknown OS, quit 2"; exit 1;;
+        echo "Unknown OS, quit"; exit 1;;
 esac
-
 echo "OS type: "$OS_INFO $OS_VER_NUM
 
 
@@ -861,6 +850,64 @@ else
 fi
 
 
+## Uncompress MySQL binary package to BASE_DIR
+if [ ! -d $BASE_DIR ]
+then
+    echo "Creating base directory $BASE_DIR"
+    mkdir -p $BASE_DIR
+    if [ $? -ne 0 ]
+    then
+        echo "Create base directory $BASE_DIR failed, quit"
+        exit 1
+    fi
+fi
+
+echo "Executing tar -xvf $MYSQL_PACKAGE to $BASE_DIR..."
+tar -xvf $MYSQL_PACKAGE -C $BASE_DIR --strip-components 1 1>/dev/null 2>&1
+if [ $? -ne 0 ]
+then
+    echo "Executing tar -xvf $MYSQL_PACKAGE to $BASE_DIR failed, quit"
+    exit 1
+fi
+
+echo "Changing $BASE_DIR's ownership"
+chown -R mysql:mysql $BASE_DIR
+if [ $? -ne 0 ]
+then
+    echo "Changing $BASE_DIR's ownership failed, quit"
+    exit 1
+fi
+
+
+## Create MySQL data directory
+if [ ! -d $DATA_DIR ]
+then
+    echo "Creating root directory $DATA_DIR for MySQL datadir"
+    mkdir -p $DATA_DIR
+    if [ $? -ne 0 ]
+    then
+        echo "Create root directory $DATA_DIR for MySQL datadir failed, quit"
+        exit 1
+    fi
+fi
+
+echo "Creating subdirectory for MySQL datadir"
+mkdir $DATA_DIR/{data,tmp,binlog,slowlog,redolog,undolog,relaylog}
+if [ $? -ne 0 ]
+then
+    echo "Creating subdirectory for MySQL datadir failed, quit"
+    exit 1
+fi
+
+echo "Changing $DATA_DIR's ownership"
+chown -R mysql:mysql $DATA_DIR
+if [ $? -ne 0 ]
+then
+    echo "Changing $DATA_DIR's ownership failed, quit"
+    exit 1
+fi
+
+
 ## Configure root's .bash_profile
 if [ `cat ~/.bash_profile | grep $BASE_DIR/bin | grep PATH | wc -l` -eq 0 ]
 then
@@ -874,5 +921,3 @@ fi
 ##mount /dev/cdrom /mnt
 ##touch mysql-5.7.29-linux-glibc2.12-x86_64.tar.gz
 ##./test.sh -c 8 -m 16 -i 2 -I 50000 -n 192.168.0.1 -p 3307 -r master -s -v 5.7.29 -b /usr/local/mysql1 -d /dbdata -M 2
-##DATA_DIR's sub directory
-##data, tmp, binlog, slowlog, redolog, undolog, relaylog
