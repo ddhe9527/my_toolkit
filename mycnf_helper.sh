@@ -876,7 +876,7 @@ then
     fi
     tar -xvf ${MYSQL_PACKAGE%.*} -C $BASE_DIR --strip-components 1 1>/dev/null 2>&1
 else
-    "Unknown package for uncompressing, quit"
+    echo "Unknown package for uncompressing, quit"
     exit 1
 fi
 
