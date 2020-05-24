@@ -745,9 +745,9 @@ fi
 echo "Installing necessary packages..."
 if [ $OS_VER_NUM -lt 8 ]
 then
-    yum install -y net-tools libaio libaio-devel numactl-libs autoconf ntp perl-Module* 1>/dev/null 2>&1
+    yum install -y net-tools libaio libaio-devel numactl-libs autoconf ntp xz perl-Module* 1>/dev/null 2>&1
 else
-    yum install -y net-tools libaio libaio-devel numactl-libs autoconf perl-Module* 1>/dev/null 2>&1
+    yum install -y net-tools libaio libaio-devel numactl-libs autoconf xz perl-Module* 1>/dev/null 2>&1
 fi
 if [ $? -eq 1 ]
 then
@@ -845,7 +845,7 @@ then
     MYSQL_PACKAGE=$PWD/$MYSQL_PACKAGE
     echo "Find $MYSQL_PACKAGE for installation"
 else
-    echo "Can not find unique mysql-$SERVER_VERSION-linux-glibc archive.tar in current directory, quit"
+    echo "Can not find unique mysql-$SERVER_VERSION-linux-glibc archive package in current directory, quit"
     exit 1
 fi
 
@@ -863,7 +863,23 @@ then
 fi
 
 echo "Executing tar -xvf $MYSQL_PACKAGE to $BASE_DIR..."
-tar -xvf $MYSQL_PACKAGE -C $BASE_DIR --strip-components 1 1>/dev/null 2>&1
+if [ ${MYSQL_PACKAGE##*.} = 'gz' ] || [ ${MYSQL_PACKAGE##*.} = 'tar' ]
+then
+    tar -xvf $MYSQL_PACKAGE -C $BASE_DIR --strip-components 1 1>/dev/null 2>&1
+elif [ ${MYSQL_PACKAGE##*.} = 'xz' ]
+then
+    xz -d $MYSQL_PACKAGE
+    if [ $? -ne 0 ]
+    then
+        echo "Executing xz -d failed, quit"
+        exit 1
+    fi
+    tar -xvf ${MYSQL_PACKAGE%.*} -C $BASE_DIR --strip-components 1 1>/dev/null 2>&1
+else
+    "Unknown package for uncompressing, quit"
+    exit 1
+fi
+
 if [ $? -ne 0 ]
 then
     echo "Executing tar -xvf $MYSQL_PACKAGE to $BASE_DIR failed, quit"
