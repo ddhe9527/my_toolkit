@@ -35,9 +35,9 @@ do
             SKIP_GENERATE_MYCNF=1;;
         h)
 echo '
-mycnf_helper has 2 main functions:
-1): generating a my.cnf for MySQL Server with specific version(default behavior)
-2): installing MySQL Server(with -s option)
+mycnf_helper has two main functions:
+1): generate a best-practice my.cnf for specific MySQL version(default behavior)
+2): install MySQL Server(with -s option)
 =====================================================================================================
 Usage:
 -a:          automatically gets CPU core count and memory capacity from current server
@@ -59,37 +59,38 @@ Usage:
 -v: <string> MySQL Server version. eg: 5.6.32, 5.7.22, 8.0.1
 =====================================================================================================
 Example:
-1): Generate a my.cnf for MySQL 5.6.10 running on particular server(4core,8GB,SSD(IOPS=20000)) with follow options:
+1): Generate a my.cnf for MySQL 5.6.10 that will be running on particular server with following features:
+    * server configuration: 4core, 8GB, SSD storage(IOPS=20000)
     * basedir=/usr/local/mysql5.6
     * datadir=/my_data
     * port=3307
     * server_id=5
-
+    
     This command will generate a my.cnf in current directory:
     ./mycnf_helper.sh -c 4 -m 8 -I 20000 -v 5.6.10 -b /usr/local/mysql5.6 -d /my_data -p 3307 -i 5 -S -r master
-
-2): Setup MySQL 5.6.10 using specified my.cnf
-    Make sure the my.cnf exists and one corresponding MySQL binary tar.gz in current directory, 
-    such as mysql-5.6.10-linux-glibc2.5-x86_64.tar.gz
-
+    
+2): Setup MySQL 5.6.10 using specified my.cnf. Make sure the my.cnf exists and one corresponding MySQL binary
+    tar.gz or tar.xz package in current directory, such as mysql-5.6.10-linux-glibc2.5-x86_64.tar.gz etc.
+    
     This command is suitable for this situation:
     ./mycnf_helper.sh -v 5.6.10 -f /root/my.cnf -s
-
-3): Setup MySQL 8.0.18 on current server(use SSD storage, IOPS=10000) with follow options:
-    * datadir=/my_data
-    * port=3306
-    * server_id=1
-    * second master-master replication node and auto_increment_offset=2
+    
+3): Setup MySQL 8.0.18 on current server with following features:
+    * server configuration: 8core, 16GB, SSD storage(IOPS=10000)
+    * datadir=/mysql_data (default)
+    * port=3306 (default)
+    * server_id=1 (default)
+    * second master-master replication node and auto_increment_offset = 2
     * has a NTP server: 192.168.1.100
     
     This command will automatically generate a my.cnf and setup the MySQL 8.0.18 on current server:
-    ./mycnf_helper.sh -a -v 8.0.18 -S -s -I 10000 -d /my_data -M 2 -n 192.168.1.100 -r slave
+    ./mycnf_helper.sh -a -v 8.0.18 -S -s -I 10000 -M 2 -n 192.168.1.100 -r slave
 
 
 Github: https://github.com/ddhe9527/my_toolkit
-Email:  heduoduo321@163.com
+Email : heduoduo321@163.com
 
-Use this script at your own risk~
+Enjoy and use at your own risk~
 '
             exit 0;;
         i)
@@ -147,7 +148,7 @@ then
     then
         echo "Memory capacity: "$MEM_CAP"GB"
     else
-        echo "Invalid memory capacity or less than 1GB, use -m to specify"
+        echo "Invalid memory capacity(may less than 1GB), use -m to specify"
         exit 1
     fi
     
@@ -181,7 +182,7 @@ then
     ## Check the destination of my.cnf
     if [ ${MY_CNF:0:1} != '/' ]
     then
-        echo 'Please use absolute path with my.cnf file, quit'
+        echo 'Please use absolute path for my.cnf file, quit'
         exit 1
     fi
     
@@ -256,7 +257,7 @@ then
     then
         if [ $AUTO_INCREMENT_OFFSET -eq 1 ] || [ $AUTO_INCREMENT_OFFSET -eq 2 ]
         then
-            echo "Master-Master replication is enabled, auto_increment_offset="$AUTO_INCREMENT_OFFSET
+            echo "Master-Master replication is enabled, auto_increment_offset = "$AUTO_INCREMENT_OFFSET
         else
             echo "Invalid auto_increment_offset, use -M to specify(1 or 2)"
             exit 1
@@ -511,7 +512,7 @@ else
 fi
 
 
-##Check my.cnf file agein, make sure it is complete
+##Check my.cnf file again, make sure it is complete
 if [ $SKIP_GENERATE_MYCNF -eq 0 ]
 then
     if [ `cat $MY_CNF | grep mycnf_helper_fingerprint | wc -l` -ne 2 ]
@@ -528,15 +529,9 @@ then
     exit 0
 fi
 
-if [ $DATADIR_NOT_EMPTY_FLAG -eq 1 ]
+if [ $DATADIR_NOT_EMPTY_FLAG -eq 1 ] || [ $BASEDIR_NOT_EMPTY_FLAG -eq 1 ]
 then
-    echo "Installation is forbidden because of no-empty directory for MySQL initial data directory"
-    exit 1
-fi
-
-if [ $BASEDIR_NOT_EMPTY_FLAG -eq 1 ]
-then
-    echo "Installation is forbidden because of no-empty directory for MySQL base directory"
+    echo "Installation is forbidden because of no-empty directory for MySQL datadir or basedir"
     exit 1
 fi
 
@@ -559,7 +554,7 @@ case $OS_INFO in
     CentOS) 
         OS_INFO='CentOS';;
     *) 
-        echo "Unknown OS, quit"; exit 1;;
+        echo "Unknown OS, quit 2"; exit 1;;
 esac
 echo "OS type: "$OS_INFO $OS_VER_NUM
 
@@ -567,7 +562,7 @@ echo "OS type: "$OS_INFO $OS_VER_NUM
 ## Make sure the installation is operated by root only
 if [ `whoami` != 'root' ]
 then
-    echo "Support root installation only, quit"
+    echo "Only support root installation, quit"
     exit 1
 fi
 
@@ -580,7 +575,7 @@ then
     echo "SELINUXTYPE=targeted" >> /etc/selinux/config
     echo "Modifying /etc/selinux/config"
     setenforce 0
-    echo "SELinux is disabled, rebooting OS later is recommanded"
+    echo "SELinux is disabled, rebooting OS is recommanded"
 fi
 
 if [ $OS_VER_NUM -eq 5 ] || [ $OS_VER_NUM -eq 6 ]
@@ -594,7 +589,7 @@ then
     systemctl stop firewalld.service
     systemctl disable firewalld.service
 else
-    echo "Support OS major version 5 ~ 8 only"
+    echo "Only support OS major version 5 ~ 8"
     exit 1
 fi
 
@@ -623,14 +618,14 @@ then
     DEFAULT_IO_SCHEDULER=`dmesg | grep -i scheduler | grep default`
     if [ $SSD_FLAG -eq 1 ] && [ `echo $DEFAULT_IO_SCHEDULER | grep noop | wc -l` -eq 0 ]
     then
-        echo "If you use SSD storage, please set innodb_flush_neighbors=0(current value) and I/O scheduler to noop."
-        echo "If you use traditional hard disk storage, please set innodb_flush_neighbors=1 and I/O scheduler to deadline."
+        echo "If you use SSD storage, please set innodb_flush_neighbors = 0(current value) and I/O scheduler to noop."
+        echo "If you use traditional hard disk storage, please set innodb_flush_neighbors = 1 and I/O scheduler to deadline."
         echo "use 'dmesg | grep -i scheduler' command to check your default I/O scheduler."
         exit 1
     elif [ $SSD_FLAG -eq 0 ] && [ `echo $DEFAULT_IO_SCHEDULER | grep deadline | wc -l` -eq 0 ]
     then
-        echo "If you use SSD storage, please set innodb_flush_neighbors=0 and I/O scheduler to noop."
-        echo "If you use traditional hard disk storage, please set innodb_flush_neighbors=1(current value) and I/O scheduler to deadline."
+        echo "If you use SSD storage, please set innodb_flush_neighbors = 0 and I/O scheduler to noop."
+        echo "If you use traditional hard disk storage, please set innodb_flush_neighbors = 1(current value) and I/O scheduler to deadline."
         echo "use 'dmesg | grep -i scheduler' command to check your default I/O scheduler."
         exit 1
     else
@@ -779,7 +774,7 @@ else
 fi
 if [ $? -eq 1 ]
 then
-    echo "Install packeges from yum failed, please check yum configuration first."
+    echo "Install packeges from yum repository failed, please check your yum configuration first."
     exit 1
 fi
 echo "Finish installing necessary packages..."
