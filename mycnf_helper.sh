@@ -4,6 +4,7 @@ MY_CNF=$PWD/my.cnf
 DATA_DIR=/mysql_data
 BASE_DIR=/usr/local/mysql
 TMP_FILE=/tmp/mycnf_helper.log
+ROOT_PASSWD=Mycnf_helper123!
 MY_PORT=3306
 IO_CAP=4000
 SERVER_ID=1
@@ -57,6 +58,34 @@ Usage:
 -S:          use SSD storage(for innodb_flush_neighbors)
 -v: <string> MySQL Server version. eg: 5.6.32, 5.7.22, 8.0.1
 =====================================================================================================
+Example:
+1): Generate a my.cnf for MySQL 5.6.10 running on particular server(4core,8GB,SSD(IOPS=20000)) with follow options:
+    * basedir=/usr/local/mysql5.6
+    * datadir=/my_data
+    * port=3307
+    * server_id=5
+
+    This command will generate a my.cnf in current directory:
+    ./mycnf_helper.sh -c 4 -m 8 -I 20000 -v 5.6.10 -b /usr/local/mysql5.6 -d /my_data -p 3307 -i 5 -S -r master
+
+2): Setup MySQL 5.6.10 using specified my.cnf
+    Make sure the my.cnf exists and one corresponding MySQL binary tar.gz in current directory, 
+    such as mysql-5.6.10-linux-glibc2.5-x86_64.tar.gz
+
+    This command is suitable for this situation:
+    ./mycnf_helper.sh -v 5.6.10 -f /root/my.cnf -s
+
+3): Setup MySQL 8.0.18 on current server(use SSD storage, IOPS=10000) with follow options:
+    * datadir=/my_data
+    * port=3306
+    * server_id=1
+    * second master-master replication node and auto_increment_offset=2
+    * has a NTP server: 192.168.1.100
+    
+    This command will automatically generate a my.cnf and setup the MySQL 8.0.18 on current server:
+    ./mycnf_helper.sh -a -v 8.0.18 -S -s -I 10000 -d /my_data -M 2 -n 192.168.1.100 -r slave
+
+
 Github: https://github.com/ddhe9527/my_toolkit
 Email:  heduoduo321@163.com
 
@@ -118,7 +147,7 @@ then
     then
         echo "Memory capacity: "$MEM_CAP"GB"
     else
-        echo "Invalid memory capacity, use -m to specify"
+        echo "Invalid memory capacity or less than 1GB, use -m to specify"
         exit 1
     fi
     
@@ -285,13 +314,12 @@ then
     echo @type:common@0@999999@datadir = $DATA_DIR/data >> $TMP_FILE
     echo @type:common@0@999999@tmpdir = $DATA_DIR/tmp >> $TMP_FILE
     echo @type:common@0@999999@socket = $DATA_DIR/mysql.sock >> $TMP_FILE
-    echo @type:common@50715@999999@mysqlx_socket = $DATA_DIR/mysqlx.sock >> $TMP_FILE
+    echo @type:common@50715@999999@loose-mysqlx_socket = $DATA_DIR/mysqlx.sock >> $TMP_FILE
     echo @type:common@0@999999@pid_file = $DATA_DIR/mysql.pid >> $TMP_FILE
     echo @type:common@0@999999@autocommit = ON >> $TMP_FILE
     echo @type:common@0@999999@character_set_server = utf8mb4 >> $TMP_FILE
     echo @type:common@0@999999@collation_server = utf8mb4_unicode_ci >> $TMP_FILE
-    echo @type:common@0@50719@tx_isolation = READ-COMMITTED >> $TMP_FILE
-    echo @type:common@50720@999999@transaction_isolation = READ-COMMITTED >> $TMP_FILE
+    echo @type:common@0@999999@transaction_isolation = READ-COMMITTED >> $TMP_FILE
     echo @type:common@0@999999@lower_case_table_names = 1 >> $TMP_FILE
     echo @type:common@0@999999@sync_binlog = 1 >> $TMP_FILE
     echo @type:common@0@999999@secure_file_priv = $DATA_DIR/tmp >> $TMP_FILE
@@ -915,6 +943,14 @@ then
     exit 1
 fi
 
+echo "Preparing and backuping my.cnf file"
+cp $MY_CNF $DATA_DIR/my.cnf
+if [ $? -ne 0 ]
+then
+    echo "Preparing my.cnf file failed, quit"
+    exit 1
+fi
+
 echo "Changing $DATA_DIR's ownership"
 chown -R mysql:mysql $DATA_DIR
 if [ $? -ne 0 ]
@@ -929,11 +965,69 @@ if [ `cat ~/.bash_profile | grep $BASE_DIR/bin | grep PATH | wc -l` -eq 0 ]
 then
     echo "Writing root's .bash_profile"
     echo "export PATH=\$PATH:$BASE_DIR/bin" >> ~/.bash_profile
-    source ~/.bash_profile
 fi
+
+
+## Initialize MySQL data directory
+sed -i "/^rpl_semi_sync_/d" $MY_CNF ## Temporarily remove semi-replication variables for initialization defaults-file
+echo "Initializing MySQL data directory..."
+if [ $MYSQL_VERSION -lt 50700 ]
+then
+    $BASE_DIR/scripts/mysql_install_db --defaults-file=$MY_CNF --basedir=$BASE_DIR --user=mysql 1>/dev/null 2>&1
+else
+    $BASE_DIR/bin/mysqld --defaults-file=$MY_CNF --initialize-insecure --basedir=$BASE_DIR --user=mysql 1>/dev/null 2>&1
+fi
+
+if [ $? -ne 0 ]
+then
+    echo "Initializing MySQL data directory failed, please check MySQL error log for further troubelshooting, quit"
+    rm -rf $MY_CNF ## Clean up intermediate my.cnf to avoid misunderstanding
+    exit 1
+else
+    echo "Initializing MySQL data directory succeed"
+fi
+rm -rf $MY_CNF ## Clean up intermediate my.cnf to avoid misunderstanding
+
+
+## Startup mysqld process
+echo "Starting mysqld process..."
+$BASE_DIR/bin/mysqld_safe --defaults-file=$DATA_DIR/my.cnf --ledir=$BASE_DIR/bin &  ##--ledir option is compatibility for earlier version of MySQL 5.6.x
+sleep 30s
+if [ `ps -ef | grep mysqld | grep port=$MY_PORT | wc -l` -eq 1 ] && [ `netstat -tunlp | awk '{print $4}' | grep -E "*:$MY_PORT$" | wc -l` -eq 1 ]
+then
+    ps -ef | grep mysqld | grep port=$MY_PORT
+    echo "Starting mysqld process succeed !!!"
+else
+    echo "Starting mysqld process failed, quit"
+    exit 1
+fi
+
+
+## Postinstallation: set root@localhost's password
+ps -ef | grep port=$MY_PORT | grep mysqld | awk '{for(i=0;++i<=NF;)a[i]=a[i]?a[i] FS $i:$i}END{for(i=0;i++<NF;)print a[i]}' > $TMP_FILE
+MYSQLD_SOCK=`cat $TMP_FILE | grep socket= | sed "s/ //g" | awk -F'[=]' '{print $NF}'`
+
+echo "Postinstallation: set root@localhost's password: '$ROOT_PASSWD'"
+$BASE_DIR/bin/mysqladmin -uroot -S$MYSQLD_SOCK password $ROOT_PASSWD 1>/dev/null 2>&1
+if [ $? -ne 0 ]
+then
+    echo "Setting root@localhost's password failed, quit"
+    exit 1
+fi
+
+
+## Postinstallation: delete anonymous database account
+echo "Postinstallation: delete anonymous database account"
+$BASE_DIR/bin/mysql -uroot -p$ROOT_PASSWD -S$MYSQLD_SOCK -e "DELETE FROM mysql.user WHERE user='' OR (user='root' AND host<>'localhost'); FLUSH PRIVILEGES;" 1>/dev/null 2>&1
+if [ $? -ne 0 ]
+then
+    echo "Deleting anonymous database account failed, quit"
+    exit 1
+fi
+
 
 
 
 ##mount /dev/cdrom /mnt
 ##touch mysql-5.7.29-linux-glibc2.12-x86_64.tar.gz
-##./test.sh -c 8 -m 16 -i 2 -I 50000 -n 192.168.0.1 -p 3307 -r master -s -v 5.7.29 -b /usr/local/mysql1 -d /dbdata -M 2
+##./test.sh -a -i 2 -I 50000 -n 192.168.0.1 -p 3307 -r master -s -v 5.7.29 -b /usr/local/mysql_5.7 -d /my_data -M 1
