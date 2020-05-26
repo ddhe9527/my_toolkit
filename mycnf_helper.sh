@@ -15,9 +15,11 @@ DATADIR_NOT_EMPTY_FLAG=0
 BASEDIR_NOT_EMPTY_FLAG=0
 MM_FLAG=0
 NTP_FLAG=0
+AUTOSTART_FLAG=0
+SUPER_RO=0
 
 ## Phase the option
-while getopts "ab:c:d:f:hi:I:m:M:n:o:p:r:sSv:" opt
+while getopts "ab:c:d:f:hi:I:m:M:n:o:p:r:sSv:z" opt
 do
     case $opt in
         a)
@@ -57,7 +59,24 @@ Usage:
 -s:          generate a my.cnf file and setup the MySQL Server
 -S:          use SSD storage(for innodb_flush_neighbors)
 -v: <string> MySQL Server version. eg: 5.6.32, 5.7.22, 8.0.1
+-z:          Make mysqld as a service and enable autostart while OS starting
 =====================================================================================================
+Theoretically supported platforms:
+    * Red Hat 5.x ~ 8.x
+    * CentOS  5.x ~ 8.x
+Currently known successfully tested platforms:
+    * Red Hat 5.8, 6.8
+    * CentOS  7.7, 8.1
+
+Theoretically supported MySQL versions:
+    * 5.6.9 and above
+Currently known successfully tested MySQL versions:
+    * 5.6.10
+    * 5.6.37
+    * 5.7.25
+    * 5.7.29
+    * 8.0.18
+
 Example:
 1): Generate a my.cnf for MySQL 5.6.10 that will be running on particular server with following features:
     * server configuration: 4core, 8GB, SSD storage(IOPS=20000)
@@ -65,16 +84,16 @@ Example:
     * datadir=/my_data
     * port=3307
     * server_id=5
-    
+
     This command will generate a my.cnf in current directory:
     ./mycnf_helper.sh -c 4 -m 8 -I 20000 -v 5.6.10 -b /usr/local/mysql5.6 -d /my_data -p 3307 -i 5 -S -r master
-    
+
 2): Setup MySQL 5.6.10 using specified my.cnf. Make sure the my.cnf exists and one corresponding MySQL binary
     tar.gz or tar.xz package in current directory, such as mysql-5.6.10-linux-glibc2.5-x86_64.tar.gz etc.
-    
+
     This command is suitable for this situation:
     ./mycnf_helper.sh -v 5.6.10 -f /root/my.cnf -s
-    
+
 3): Setup MySQL 8.0.18 on current server with following features:
     * server configuration: 8core, 16GB, SSD storage(IOPS=10000)
     * datadir=/mysql_data (default)
@@ -82,7 +101,7 @@ Example:
     * server_id=1 (default)
     * second master-master replication node and auto_increment_offset = 2
     * has a NTP server: 192.168.1.100
-    
+
     This command will automatically generate a my.cnf and setup the MySQL 8.0.18 on current server:
     ./mycnf_helper.sh -a -v 8.0.18 -S -s -I 10000 -M 2 -n 192.168.1.100 -r slave
 
@@ -90,7 +109,7 @@ Example:
 Github: https://github.com/ddhe9527/my_toolkit
 Email : heduoduo321@163.com
 
-Enjoy and use at your own risk~
+Enjoy and free to use at your own risk~
 '
             exit 0;;
         i)
@@ -117,6 +136,8 @@ Enjoy and use at your own risk~
             SSD_FLAG=1;;
         v)
             SERVER_VERSION=$OPTARG;;
+        z)
+            AUTOSTART_FLAG=1;;
         ?)
             echo "Unknown option, quit"
             exit 1;;
@@ -133,7 +154,7 @@ fi
 
 if [ $SKIP_GENERATE_MYCNF -eq 0 ]
 then
-    
+
     ## Make sure the CPU core count is digit
     if [ `echo $CPU_CORE_COUNT | sed -n '/^[1-9][0-9]*$/p'` ]
     then
@@ -142,7 +163,7 @@ then
         echo "Invalid CPU core count, use -c to specify"
         exit 1
     fi
-    
+
     ## Make sure the memory capacity is digit
     if [ `echo $MEM_CAP | sed -n '/^[1-9][0-9]*$/p'` ]
     then
@@ -151,7 +172,7 @@ then
         echo "Invalid memory capacity(may less than 1GB), use -m to specify"
         exit 1
     fi
-    
+
     ## Make sure the port is digit
     if [ `echo $MY_PORT | sed -n '/^[1-9][0-9]*$/p'` ]
     then
@@ -160,7 +181,7 @@ then
         echo "Invalid port number, use -p to specify"
         exit 1
     fi
-    
+
     ## Make sure the server_id is digit
     if [ `echo $SERVER_ID | sed -n '/^[1-9][0-9]*$/p'` ]
     then
@@ -169,7 +190,7 @@ then
         echo "Invalid server_id, use -i to specify"
         exit 1
     fi
-    
+
     ## Make sure the IOPS is digit
     if [ `echo $IO_CAP | sed -n '/^[1-9][0-9]*$/p'` ]
     then
@@ -178,14 +199,14 @@ then
         echo "Invalid IO capacity, use -I to specify"
         exit 1
     fi
-    
+
     ## Check the destination of my.cnf
     if [ ${MY_CNF:0:1} != '/' ]
     then
         echo 'Please use absolute path for my.cnf file, quit'
         exit 1
     fi
-    
+
     if [ -f $MY_CNF ]
     then
         echo $MY_CNF" has already exists, overwriting is not supported"
@@ -201,7 +222,7 @@ then
             echo "MySQL config file will be created: "$MY_CNF
         fi
     fi
-    
+
     ## Check the data directory, must be empty or not exist
     DATA_DIR=${DATA_DIR%*/}
     if [ ${DATA_DIR:0:1} != '/' ]
@@ -466,15 +487,15 @@ then
     echo @type:semi-replication@0@999999@rpl_semi_sync_master_enabled = ON >> $TMP_FILE
     echo @type:semi-replication@0@999999@rpl_semi_sync_slave_enabled = ON >> $TMP_FILE
     echo @type:semi-replication@0@999999@rpl_semi_sync_master_timeout = 5000 >> $TMP_FILE
-    
+
     ##Master master replication
     if [ $MM_FLAG -eq 1 ]
     then
         echo @type:mm-replication@0@999999@auto_increment_offset = $AUTO_INCREMENT_OFFSET >> $TMP_FILE
         echo @type:mm-replication@0@999999@auto_increment_increment = 2 >> $TMP_FILE
     fi
-    
-    
+
+
     ##Write my.cnf file
     echo "##This file is created by mycnf_helper for MySQL "$SERVER_VERSION", use at your own risk(mycnf_helper_fingerprint)" > $MY_CNF
     echo '[mysqld]' >> $MY_CNF
@@ -578,13 +599,13 @@ then
     echo "SELinux is disabled, rebooting OS is recommanded"
 fi
 
-if [ $OS_VER_NUM -eq 5 ] || [ $OS_VER_NUM -eq 6 ]
+if [ $OS_VER_NUM -lt 7 ]    ##for RHEL/CentOS 5,6
 then
     chkconfig --level 2345 iptables off
     chkconfig --level 2345 ip6tables off
     service iptables stop
     service ip6tables stop
-elif [ $OS_VER_NUM -eq 7 ] || [ $OS_VER_NUM -eq 8 ]
+elif [ $OS_VER_NUM -ge 7 ] && [ $OS_VER_NUM -lt 9 ]    ##for RHEL/CentOS 7,8
 then
     systemctl stop firewalld.service
     systemctl disable firewalld.service
@@ -752,7 +773,7 @@ if [ `rpm -qa | grep mariadb | wc -l` -gt 0 ]
 then
     echo "---------------------------------------- Find some MariaDB packages"
     rpm -qa | grep mariadb
-    
+
     if [ `ps -ef | grep mysqld | grep -v grep | wc -l` -eq 0 ]
     then
         echo "Cleaning up the mariadb packages"
@@ -998,10 +1019,34 @@ else
 fi
 
 
-## Postinstallation: set root@localhost's password
+## Temporarily turn off super_read_only
 ps -ef | grep port=$MY_PORT | grep mysqld | awk '{for(i=0;++i<=NF;)a[i]=a[i]?a[i] FS $i:$i}END{for(i=0;i++<NF;)print a[i]}' > $TMP_FILE
 MYSQLD_SOCK=`cat $TMP_FILE | grep socket= | sed "s/ //g" | awk -F'[=]' '{print $NF}'`
+DATADIR_DATA=`cat $TMP_FILE | grep datadir= | sed "s/ //g" | awk -F'[=]' '{print $NF}'`
+PID_FILE=`cat $TMP_FILE | grep pid-file= | sed "s/ //g" | awk -F'[=]' '{print $NF}'`
 
+if [ $REPL_ROLE = 'S' ]    ##Slave
+then
+    SUPER_RO=`$BASE_DIR/bin/mysql -uroot -S$MYSQLD_SOCK -N --batch -e "SHOW VARIABLES LIKE 'super_read_only'" | wc -l 2>/dev/null`
+    if [ $? -ne 0 ]
+    then
+        echo "Getting super_read_only variable failed, quit"
+        exit 1
+    fi
+    
+    if [ $SUPER_RO -gt 0 ]
+    then
+        $BASE_DIR/bin/mysql -uroot -S$MYSQLD_SOCK -e "SET GLOBAL super_read_only=OFF;" 1>/dev/null 2>&1
+        if [ $? -ne 0 ]
+        then
+            echo "Turning off super_read_only failed, quit"
+            exit 1
+        fi
+    fi
+fi
+
+
+## Postinstallation: set root@localhost's password
 echo "Postinstallation: set root@localhost's password: '$ROOT_PASSWD'"
 $BASE_DIR/bin/mysqladmin -uroot -S$MYSQLD_SOCK password $ROOT_PASSWD 1>/dev/null 2>&1
 if [ $? -ne 0 ]
@@ -1011,18 +1056,111 @@ then
 fi
 
 
-## Postinstallation: delete anonymous database account
-echo "Postinstallation: delete anonymous database account"
-$BASE_DIR/bin/mysql -uroot -p$ROOT_PASSWD -S$MYSQLD_SOCK -e "DELETE FROM mysql.user WHERE user='' OR (user='root' AND host<>'localhost'); FLUSH PRIVILEGES;" 1>/dev/null 2>&1
+## Postinstallation: clear anonymous database account and test database
+echo "Postinstallation: clean up anonymous database account and test database"
+$BASE_DIR/bin/mysql -uroot -p$ROOT_PASSWD -S$MYSQLD_SOCK -e "
+DELETE FROM mysql.user WHERE user='' OR (user='root' AND host<>'localhost');
+DELETE FROM mysql.db WHERE Db like 'test%';
+FLUSH PRIVILEGES;
+DROP DATABASE IF EXISTS test;
+RESET MASTER;
+" 1>/dev/null 2>&1
 if [ $? -ne 0 ]
 then
-    echo "Deleting anonymous database account failed, quit"
+    echo "Cleaning up anonymous database account and test database failed, quit"
     exit 1
 fi
 
 
+## Turn on super_read_only
+if [ $REPL_ROLE = 'S' ] && [ $SUPER_RO -gt 0 ]
+then
+    $BASE_DIR/bin/mysql -uroot -p$ROOT_PASSWD -S$MYSQLD_SOCK -e "SET GLOBAL super_read_only=ON;" 1>/dev/null 2>&1
+    if [ $? -ne 0 ]
+    then
+        echo "Turning on super_read_only failed, quit"
+        exit 1
+    fi
+fi
 
 
-##mount /dev/cdrom /mnt
-##touch mysql-5.7.29-linux-glibc2.12-x86_64.tar.gz
-##./test.sh -a -i 2 -I 50000 -n 192.168.0.1 -p 3307 -r master -s -v 5.7.29 -b /usr/local/mysql_5.7 -d /my_data -M 1
+## Configure mysqld as a service and enable autostart
+if [ $AUTOSTART_FLAG -eq 1 ]
+then
+    read -p "Enable autostarting will overwrite /etc/my.cnf and /etc/init.d/mysqld. Enter 'YES' if you want to continue: " CONTINUE_FLAG
+    if [ `echo $CONTINUE_FLAG | tr [a-z] [A-Z]` = 'YES' ]
+    then
+        if [ -f /etc/my.cnf ]
+        then
+            echo "Moving /etc/my.cnf to /etc/my.cnf.mycnf_helper.old"
+            /bin/mv /etc/my.cnf /etc/my.cnf.mycnf_helper.old
+            if [ $? -ne 0 ]
+            then
+                echo "Moving /etc/my.cnf to /etc/my.cnf.mycnf_helper.old failed, quit"
+                exit 1
+            fi
+        fi
+
+        echo "Copying $DATA_DIR/my.cnf to /etc/my.cnf"
+        /bin/cp $DATA_DIR/my.cnf /etc/my.cnf
+        if [ $? -ne 0 ]
+        then
+            echo "Copying $DATA_DIR/my.cnf to /etc/my.cnf failed, quit"
+            exit 1
+        fi
+
+        if [ -f /etc/init.d/mysqld ]
+        then
+            echo "Moving /etc/init.d/mysqld to /etc/init.d/mysqld.mycnf_helper.old"
+             /bin/mv /etc/init.d/mysqld /etc/init.d/mysqld.mycnf_helper.old
+            if [ $? -ne 0 ]
+            then
+                echo "Moving /etc/init.d/mysqld to /etc/init.d/mysqld.mycnf_helper.old failed, quit"
+                exit 1
+            fi
+        fi
+
+        echo "Copying $BASE_DIR/support-files/mysql.server to /etc/init.d/mysqld"
+        /bin/cp $BASE_DIR/support-files/mysql.server /etc/init.d/mysqld
+        if [ $? -ne 0 ]
+        then
+            echo "Copying $BASE_DIR/support-files/mysql.server to /etc/init.d/mysqld failed, quit"
+            exit 1
+        fi
+
+        echo "Modifying /etc/init.d/mysqld"
+        sed -i "s|^basedir=$|basedir=$BASE_DIR|g" /etc/init.d/mysqld
+        sed -i "s|^datadir=$|datadir=$DATADIR_DATA|g" /etc/init.d/mysqld
+        sed -i "s|^mysqld_pid_file_path=$|mysqld_pid_file_path=$PID_FILE|g" /etc/init.d/mysqld
+        chmod 755 /etc/init.d/mysqld
+        if [ $? -ne 0 ]
+        then
+            echo "Modifying /etc/init.d/mysqld's privilege failed, quit"
+            exit 1
+        fi
+
+        if [ $OS_VER_NUM -lt 7 ]    ##for RHEL/CentOS 5,6
+        then
+            service mysqld stop
+            chkconfig --del mysqld
+            chkconfig --add mysqld
+            chkconfig mysqld on
+            service mysqld start
+            service mysqld status
+        elif [ $OS_VER_NUM -ge 7 ] && [ $OS_VER_NUM -lt 9 ]    ##for RHEL/CentOS 7,8
+        then
+            systemctl stop mysqld.service
+            systemctl disable mysqld
+            systemctl enable mysqld
+            systemctl start mysqld.service
+            systemctl status mysqld.service
+        else
+            echo "Only support OS major version 5 ~ 8"
+            exit 1
+        fi
+    else
+        echo "Operation canceled"
+    fi
+fi
+
+##./test.sh -a -r master -I 5000 -s -v 5.6.10 -z
