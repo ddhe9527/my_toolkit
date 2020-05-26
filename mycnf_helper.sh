@@ -59,7 +59,7 @@ Usage:
 -s:          generate a my.cnf file and setup the MySQL Server
 -S:          use SSD storage(for innodb_flush_neighbors)
 -v: <string> MySQL Server version. eg: 5.6.32, 5.7.22, 8.0.1
--z:          make mysqld become a service and autostart while OS starting
+-z:          make mysqld autostart with the operation system
 =====================================================================================================
 Theoretically supported platforms:
     * Red Hat 5.x ~ 8.x
@@ -1087,7 +1087,7 @@ fi
 ## Configure mysqld as a service and enable autostart
 if [ $AUTOSTART_FLAG -eq 1 ]
 then
-    read -p "Enable autostarting will overwrite /etc/my.cnf and /etc/init.d/mysqld. Enter 'YES' if you want to continue: " CONTINUE_FLAG
+    read -p "Enable autostarting will overwrite /etc/my.cnf and /etc/init.d/mysqld. Enter 'YES' if you want to do this: " CONTINUE_FLAG
     if [ `echo $CONTINUE_FLAG | tr [a-z] [A-Z]` = 'YES' ]
     then
         if [ -f /etc/my.cnf ]
@@ -1162,5 +1162,3 @@ then
         echo "Operation canceled"
     fi
 fi
-
-##./test.sh -a -r master -I 5000 -s -v 5.6.10 -z
