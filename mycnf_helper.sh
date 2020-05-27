@@ -1,13 +1,17 @@
 #!/bin/bash
 
+## Default values
 MY_CNF=$PWD/my.cnf
 DATA_DIR=/mysql_data
 BASE_DIR=/usr/local/mysql
 TMP_FILE=/tmp/mycnf_helper.log
-ROOT_PASSWD=Mycnf_helper123!
 MY_PORT=3306
 IO_CAP=4000
 SERVER_ID=1
+ROOT_PASSWD=Mycnf_helper123!    ##password for 'root'@'localhost' with ALL privilege
+REPL_PASSWD=Mycnf_helper456!    ##password for 'repl'@'%' with REPLICATION SLAVE and SUPER privilege
+
+## Flags(internal use)
 SETUP_FLAG=0
 SSD_FLAG=0
 SKIP_GENERATE_MYCNF=0
@@ -17,9 +21,12 @@ MM_FLAG=0
 NTP_FLAG=0
 AUTOSTART_FLAG=0
 SUPER_RO=0
+MASTER_IP_FLAG=0
+OWN_IP_FLAG=0
+FAIL_FLAG=0
 
 ## Phase the option
-while getopts "ab:c:d:f:hi:I:m:M:n:o:p:r:sSv:z" opt
+while getopts "ab:c:d:f:hi:I:m:M:n:o:p:r:sSv:x:y:z" opt
 do
     case $opt in
         a)
@@ -59,6 +66,9 @@ Usage:
 -s:          generate a my.cnf file and setup the MySQL Server
 -S:          use SSD storage(for innodb_flush_neighbors)
 -v: <string> MySQL Server version. eg: 5.6.32, 5.7.22, 8.0.1
+-x: <string> replication master IP address that will be used in "CHANGE MASTER TO" statement
+-y: <string> own IP address that will be used in reversed "CHANGE MASTER TO" statement to
+             build master-master topology
 -z:          make mysqld autostart with the operation system
 =====================================================================================================
 Theoretically supported platforms:
@@ -94,16 +104,25 @@ Example:
     This command is suitable for this situation:
     ./mycnf_helper.sh -v 5.6.10 -f /root/my.cnf -s
 
-3): Setup MySQL 8.0.18 on current server with following features:
-    * server configuration: 8core, 16GB, SSD storage(IOPS=10000)
+3): Setup a one-way replication with following features:
+    * two servers with same hardware configuration: 8core, 16GB, SSD storage(IOPS=10000)
+    * MySQL version: 8.0.18
+    * master IP address: 192.168.90.135
+    * master server_id: 10
+    * slave IP address: 192.168.90.136
+    * slave server_id: 20
     * datadir=/mysql_data (default)
+    * basedir=/usr/local/mysql (default)
     * port=3306 (default)
-    * server_id=1 (default)
-    * second master-master replication node and auto_increment_offset = 2
-    * has a NTP server: 192.168.1.100
+    * has a NTP server: 192.168.90.100
 
-    This command will automatically generate a my.cnf and setup the MySQL 8.0.18 on current server:
-    ./mycnf_helper.sh -a -v 8.0.18 -S -s -I 10000 -M 2 -n 192.168.1.100 -r slave
+    These commands will automatically generate a my.cnf and setup MySQL 8.0.18:
+    * master: ./mycnf_helper.sh -a -I 10000 -v 8.0.18 -S -s -n 192.168.90.100 -r master -i 10
+    * slave : ./mycnf_helper.sh -a -I 10000 -v 8.0.18 -S -s -n 192.168.90.100 -r slave -i 20 -x 192.168.90.135
+
+4): Similar to example 3, if setup a master-master replication with features like above, use these commands:
+    * master1: ./mycnf_helper.sh -a -I 10000 -v 8.0.18 -S -s -n 192.168.90.100 -r master -i 10 -M 1
+    * master2: ./mycnf_helper.sh -a -I 10000 -v 8.0.18 -S -s -n 192.168.90.100 -r master -i 20 -M 2 -x 192.168.90.135 -y 192.168.90.136
 
 
 Github: https://github.com/ddhe9527/my_toolkit
@@ -136,6 +155,12 @@ Enjoy and free to use at your own risk~
             SSD_FLAG=1;;
         v)
             SERVER_VERSION=$OPTARG;;
+        x)
+            MASTER_IP_FLAG=1
+            MASTER_IP=$OPTARG;;
+        y)
+            OWN_IP_FLAG=1
+            OWN_IP=$OPTARG;;
         z)
             AUTOSTART_FLAG=1;;
         ?)
@@ -279,6 +304,7 @@ then
         if [ $AUTO_INCREMENT_OFFSET -eq 1 ] || [ $AUTO_INCREMENT_OFFSET -eq 2 ]
         then
             echo "Master-Master replication is enabled, auto_increment_offset = "$AUTO_INCREMENT_OFFSET
+            REPL_ROLE=M
         else
             echo "Invalid auto_increment_offset, use -M to specify(1 or 2)"
             exit 1
@@ -382,6 +408,7 @@ then
     echo @type:common@0@999999@myisam_sort_buffer_size = 32M >> $TMP_FILE
     echo @type:common@50622@50699@binlog_error_action = ABORT_SERVER >> $TMP_FILE
     echo @type:common@50706@999999@binlog_error_action = ABORT_SERVER >> $TMP_FILE
+    echo @type:common@50702@999999@default_authentication_plugin = mysql_native_password >> $TMP_FILE
     echo @type:common@0@999999@innodb_file_per_table = ON >> $TMP_FILE
     echo @type:common@0@50799@innodb_file_format = Barracuda >> $TMP_FILE
     echo @type:common@0@50799@innodb_file_format_max = Barracuda >> $TMP_FILE
@@ -493,8 +520,16 @@ then
     then
         echo @type:mm-replication@0@999999@auto_increment_offset = $AUTO_INCREMENT_OFFSET >> $TMP_FILE
         echo @type:mm-replication@0@999999@auto_increment_increment = 2 >> $TMP_FILE
-    fi
 
+        ##Turn off the event_scheduler is auto_increment_offset = 2
+        if [ $AUTO_INCREMENT_OFFSET -eq 2 ]
+        then
+            sed -i "s/event_scheduler = ON/event_scheduler = OFF/g" $TMP_FILE
+            EVENT_SCHEDULER='OFF'
+        else
+            EVENT_SCHEDULER='ON'
+        fi
+    fi
 
     ##Write my.cnf file
     echo "##This file is created by mycnf_helper for MySQL "$SERVER_VERSION", use at your own risk(mycnf_helper_fingerprint)" > $MY_CNF
@@ -858,6 +893,31 @@ then
 fi
 
 
+## Check master's IP address if it's slave or master-master replication
+if [ $REPL_ROLE = 'S' ] || [ $MM_FLAG -eq 1 ]
+then
+    if [ $MASTER_IP_FLAG -eq 1 ]
+    then
+        if [ `echo $MASTER_IP | grep '^[0-9]\{1,3\}\.[0-9]\{1,3\}\.[0-9]\{1,3\}\.[0-9]\{1,3\}$' | wc -l` -eq 0 ]
+        then
+            echo "Invalid IP address for replication master, use -x to specify the right IP, quit"
+            exit 1
+        fi
+    fi
+fi
+
+
+## Check current server's IP address if it's specified
+if [ $MM_FLAG -eq 1 ] && [ $OWN_IP_FLAG -eq 1 ]
+then
+    if [ `echo $OWN_IP | grep '^[0-9]\{1,3\}\.[0-9]\{1,3\}\.[0-9]\{1,3\}\.[0-9]\{1,3\}$' | wc -l` -eq 0 ]
+    then
+        echo "Invalid IP address for current server, use -y to specify the right IP, quit"
+        exit 1
+    fi
+fi
+
+
 ## Create group and user
 if [ `cat /etc/group | grep mysql: | wc -l` -eq 0 ]
 then
@@ -1027,14 +1087,14 @@ PID_FILE=`cat $TMP_FILE | grep pid-file= | sed "s/ //g" | awk -F'[=]' '{print $N
 
 if [ $REPL_ROLE = 'S' ]    ##Slave
 then
-    SUPER_RO=`$BASE_DIR/bin/mysql -uroot -S$MYSQLD_SOCK -N --batch -e "SHOW VARIABLES LIKE 'super_read_only'" | wc -l 2>/dev/null`
+    SUPER_RO=`$BASE_DIR/bin/mysql -uroot -S$MYSQLD_SOCK -N --batch -e "SHOW VARIABLES LIKE 'super_read_only'" 2>/dev/null`
     if [ $? -ne 0 ]
     then
         echo "Getting super_read_only variable failed, quit"
         exit 1
     fi
-    
-    if [ $SUPER_RO -gt 0 ]
+
+    if [ -n "$SUPER_RO" ]
     then
         $BASE_DIR/bin/mysql -uroot -S$MYSQLD_SOCK -e "SET GLOBAL super_read_only=OFF;" 1>/dev/null 2>&1
         if [ $? -ne 0 ]
@@ -1057,23 +1117,126 @@ fi
 
 
 ## Postinstallation: clear anonymous database account and test database
-echo "Postinstallation: clean up anonymous database account and test database"
+echo "Postinstallation: clean up anonymous database account, test database, and create replication account"
 $BASE_DIR/bin/mysql -uroot -p$ROOT_PASSWD -S$MYSQLD_SOCK -e "
 DELETE FROM mysql.user WHERE user='' OR (user='root' AND host<>'localhost');
 DELETE FROM mysql.db WHERE Db like 'test%';
+CREATE USER 'repl'@'%' IDENTIFIED BY '$REPL_PASSWD';
+GRANT REPLICATION SLAVE,SUPER ON *.* TO 'repl'@'%';
 FLUSH PRIVILEGES;
 DROP DATABASE IF EXISTS test;
 RESET MASTER;
 " 1>/dev/null 2>&1
 if [ $? -ne 0 ]
 then
-    echo "Cleaning up anonymous database account and test database failed, quit"
+    echo "Cleaning up anonymous database account, test database, and create replication account failed, quit"
     exit 1
+fi
+echo "Postinstallation: replication database account 'repl' has been created, password: '$REPL_PASSWD'"
+
+
+## Establish replication relationship
+if [ $REPL_ROLE = 'S' ] || [ $MM_FLAG -eq 1 ]
+then
+    if [ $MASTER_IP_FLAG -eq 1 ]
+    then
+        ## Check server_id variable, make sure it's different between current mysqld and remote mysqld
+        SERVER_ID_X=`$BASE_DIR/bin/mysql -urepl -p$REPL_PASSWD -h$MASTER_IP -N --batch -e "SHOW VARIABLES LIKE 'server_id'" 2>/dev/null | awk '{print $2}'`
+        if [ -z "$SERVER_ID_X" ]
+        then
+            echo "Getting master's server_id failed, one-way replication will not be established"
+            FAIL_FLAG=1
+        else
+            if [ $SERVER_ID_X -eq $SERVER_ID ]
+            then
+                echo "Illegal: master and slave have same server_id"
+                FAIL_FLAG=1
+            fi
+        fi
+        ## Execute "CHANGE MASTER TO" statement on current mysqld
+        if [ $FAIL_FLAG -eq 0 ]
+        then
+            echo "Establishing one-way replication relationship by executing 'CHANGE MASTER TO' statement"
+            $BASE_DIR/bin/mysql -uroot -p$ROOT_PASSWD -S$MYSQLD_SOCK -e "
+            CHANGE MASTER TO MASTER_HOST='$MASTER_IP',MASTER_USER='repl',MASTER_PASSWORD='$REPL_PASSWD',MASTER_AUTO_POSITION=1;
+            START SLAVE;
+            "  1>/dev/null 2>&1
+            if [ $? -ne 0 ]
+            then
+                echo "Establishing one-way replication relationship failed"
+                FAIL_FLAG=1
+            else
+                echo "Establishing one-way replication relationship succeed"
+            fi
+        fi
+        ## Establish reversed replication relationship for master-master topology
+        if [ $OWN_IP_FLAG -eq 1 ] && [ $MM_FLAG -eq 1 ] && [ $FAIL_FLAG -eq 0 ]
+        then
+            echo "Establishing master-master replication relationship by executing 'CHANGE MASTER TO' statement on remote server"
+            AUTO_INCREMENT_OFFSET_X=`$BASE_DIR/bin/mysql -urepl -p$REPL_PASSWD -h$MASTER_IP -N --batch -e "SHOW VARIABLES LIKE 'auto_increment_offset'" 2>/dev/null | awk '{print $2}'`
+            if [ -z "$AUTO_INCREMENT_OFFSET_X" ]
+            then
+                echo "Getting other side's auto_increment_offset failed, master-master replication will not be established"
+                FAIL_FLAG=1
+            fi
+            AUTO_INCREMENT_INCREMENT_X=`$BASE_DIR/bin/mysql -urepl -p$REPL_PASSWD -h$MASTER_IP -N --batch -e "SHOW VARIABLES LIKE 'auto_increment_increment'" 2>/dev/null | awk '{print $2}'`
+            if [ -z "$AUTO_INCREMENT_INCREMENT_X" ]
+            then
+                echo "Getting other side's auto_increment_increment failed, master-master replication will not be established"
+                FAIL_FLAG=1
+            fi
+            EVENT_SCHEDULER_X=`$BASE_DIR/bin/mysql -urepl -p$REPL_PASSWD -h$MASTER_IP -N --batch -e "SHOW VARIABLES LIKE 'event_scheduler'" 2>/dev/null | awk '{print $2}'`
+            if [ -z "$EVENT_SCHEDULER_X" ]
+            then
+                echo "Getting other side's event_scheduler failed, master-master replication will not be established"
+                FAIL_FLAG=1
+            fi
+            ## Check auto_increment_offset, auto_increment_increment and event_scheduler variables
+            if [ $FAIL_FLAG -eq 0 ]
+            then
+                if [ $AUTO_INCREMENT_INCREMENT_X -eq 2 ] && [ $AUTO_INCREMENT_OFFSET_X -ne $AUTO_INCREMENT_OFFSET ]
+                then
+                    if [ $AUTO_INCREMENT_OFFSET_X -eq 1 ] || [ $AUTO_INCREMENT_OFFSET_X -eq 2 ]
+                    then
+                        if [ $EVENT_SCHEDULER_X = 'OFF' ] || [ $EVENT_SCHEDULER_X != $EVENT_SCHEDULER ]
+                        then
+                            FAIL_FLAG=0
+                        else
+                            echo "Other side's event_scheduler and current mysqld's event_scheduler are both set to 'ON', it's risky in master-master replication"
+                            echo "master-master replication will not be established"
+                            FAIL_FLAG=1
+                        fi
+                    else
+                        echo "Other side's auto_increment_offset not equal 1 or 2, master-master replication will not be established"
+                        FAIL_FLAG=1
+                    fi
+                else
+                    echo "Other side's auto_increment_increment not equal 2, or it's auto_increment_offset conflicts with current mysqld"
+                    echo "master-master replication will not be established"
+                    FAIL_FLAG=1
+                fi
+            fi
+            ## Execute "CHANGE MASTER TO" statement on remote mysqld
+            if  [ $FAIL_FLAG -eq 0 ]
+            then
+                $BASE_DIR/bin/mysql -urepl -p$REPL_PASSWD -h$MASTER_IP -e "
+                CHANGE MASTER TO MASTER_HOST='$OWN_IP',MASTER_USER='repl',MASTER_PASSWORD='$REPL_PASSWD',MASTER_AUTO_POSITION=1;
+                START SLAVE;
+                "  1>/dev/null 2>&1
+                if [ $? -ne 0 ]
+                then
+                    echo "Establishing master-master replication relationship failed"
+                else
+                    echo "Establishing master-master replication relationship succeed"
+                fi
+            fi           
+        fi
+    fi
 fi
 
 
 ## Turn on super_read_only
-if [ $REPL_ROLE = 'S' ] && [ $SUPER_RO -gt 0 ]
+if [ $REPL_ROLE = 'S' ] && [ -n "$SUPER_RO" ]
 then
     $BASE_DIR/bin/mysql -uroot -p$ROOT_PASSWD -S$MYSQLD_SOCK -e "SET GLOBAL super_read_only=ON;" 1>/dev/null 2>&1
     if [ $? -ne 0 ]
@@ -1162,3 +1325,6 @@ then
         echo "Operation canceled"
     fi
 fi
+
+
+echo "Everything succeed !!!"
