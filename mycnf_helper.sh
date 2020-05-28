@@ -24,9 +24,10 @@ SUPER_RO=0
 MASTER_IP_FLAG=0
 OWN_IP_FLAG=0
 FAIL_FLAG=0
+INSTALL_TOOLS_FLAG=0
 
 ## Phase the option
-while getopts "ab:c:d:f:hi:I:m:M:n:o:p:r:sSv:x:y:z" opt
+while getopts "ab:c:d:f:hi:I:m:M:n:o:p:r:sStv:x:y:z" opt
 do
     case $opt in
         a)
@@ -65,16 +66,17 @@ Usage:
 -r: <string> replication role, must be master or slave
 -s:          generate a my.cnf file and setup the MySQL Server
 -S:          use SSD storage(for innodb_flush_neighbors)
+-t:          install tools: XtraBackup etc.
 -v: <string> MySQL Server version. eg: 5.6.32, 5.7.22, 8.0.1
 -x: <string> replication master IP address that will be used in "CHANGE MASTER TO" statement
 -y: <string> own IP address that will be used in reversed "CHANGE MASTER TO" statement to
              build master-master topology
 -z:          make mysqld autostart with the operation system
 =====================================================================================================
-Theoretically supported platforms:
+Theoretically supported platforms(x86_64):
     * Red Hat 5.x ~ 8.x
     * CentOS  5.x ~ 8.x
-Currently known successfully tested platforms:
+Currently known successfully tested platforms(x86_64):
     * Red Hat 5.8, 6.8
     * CentOS  7.7, 8.1
 
@@ -153,6 +155,8 @@ Enjoy and free to use at your own risk~
             SETUP_FLAG=1;;
         S)
             SSD_FLAG=1;;
+        t)
+            INSTALL_TOOLS_FLAG=1;;
         v)
             SERVER_VERSION=$OPTARG;;
         x)
@@ -1084,6 +1088,7 @@ ps -ef | grep port=$MY_PORT | grep mysqld | awk '{for(i=0;++i<=NF;)a[i]=a[i]?a[i
 MYSQLD_SOCK=`cat $TMP_FILE | grep socket= | sed "s/ //g" | awk -F'[=]' '{print $NF}'`
 DATADIR_DATA=`cat $TMP_FILE | grep datadir= | sed "s/ //g" | awk -F'[=]' '{print $NF}'`
 PID_FILE=`cat $TMP_FILE | grep pid-file= | sed "s/ //g" | awk -F'[=]' '{print $NF}'`
+DEFAULTS_FILE=`cat $TMP_FILE | grep defaults-file= | sed "s/ //g" | awk -F'[=]' '{print $NF}'`
 
 if [ $REPL_ROLE = 'S' ]    ##Slave
 then
@@ -1323,6 +1328,77 @@ then
         fi
     else
         echo "Operation canceled"
+    fi
+fi
+
+
+## install tools
+if [ $INSTALL_TOOLS_FLAG -eq 1 ]
+then
+    ## install XtraBackup
+    FAIL_FLAG=0
+    if [ $OS_VER_NUM -gt 5 ] && [ $OS_VER_NUM -lt 9 ]   ## now support RHEL/CentOS 6,7,8
+    then
+        if [ `rpm -qa | grep percona-xtrabackup | wc -l` -eq 0 ]
+        then
+            echo "Installing XtraBackup..."
+            yum install -y perl-DBI perl-DBD-MySQL rsync perl-Digest-MD5 1>/dev/null 2>&1
+            if [ $? -ne 0 ]
+            then
+                echo "Install packeges from yum repository failed, please check your yum configuration first."
+                FAIL_FLAG=1
+            fi
+
+            if [ $FAIL_FLAG -eq 0 ]
+            then
+                QPRESS=`ls | grep ^qpress | grep el$OS_VER_NUM | head -1`
+                LIBEV=`ls | grep ^libev | grep el$OS_VER_NUM | head -1`
+                if [ $MYSQL_VERSION -lt 80000 ]
+                then
+                    XB=`ls | grep ^percona-xtrabackup-24 | grep el$OS_VER_NUM | head -1`
+                else
+                    XB=`ls | grep ^percona-xtrabackup-80 | grep el$OS_VER_NUM | head -1`
+                fi
+                
+                if [ -n "$QPRESS" ] && [ -n "$LIBEV" ] && [ -n "$XB" ]
+                then
+                    rpm -ivh $QPRESS $LIBEV $XB
+                    if [ $? -ne 0 ]
+                    then
+                        echo "Installing XtraBackup failed"
+                        FAIL_FLAG=1
+                    else
+                        echo "Installing XtraBackup succeed"
+                    fi
+                else
+                    echo "Lack of necessary packages, XtraBackup will not be installed"
+                    FAIL_FLAG=1
+                fi
+            else
+                echo "Skip installing XtraBackup"
+            fi
+        else
+            echo "XtraBackup is already installed"
+            rpm -qa | grep percona-xtrabackup
+        fi
+        ## print some recommadation
+        if [ $FAIL_FLAG -eq 0 ]
+        then
+            OUTPUT_FILE=/dbbak/database/$(date +%Y%m%d)$(date +%H%M)fullback.xbstream
+            echo "================================================================================"
+            echo "You can use this command to create compressed full backup(recommanded on slave):"
+            echo "xtrabackup --defaults-file=$DEFAULTS_FILE --backup --user=root --password=$ROOT_PASSWD --parallel=4 --slave-info \\"
+            echo "--safe-slave-backup --stream=xbstream --compress --compress-threads=4 --target-dir=/dbbak/database \\"
+            echo "--socket=$MYSQLD_SOCK 2>/dbbak/backup.log 1>$OUTPUT_FILE"
+            echo "================================================================================"
+            echo "You can use these two commands to uncompress backup:"
+            echo "xbstream -x < $OUTPUT_FILE -C /dbbak/uncompress"
+            echo "xtrabackup -uroot -p$ROOT_PASSWD --socket=$MYSQLD_SOCK --decompress --remove-original \\"
+            echo "--target-dir=/dbbak/uncompress"
+            echo "================================================================================"
+        fi
+    else
+        echo "Skip installing XtraBackup because OS version is too old or too new"
     fi
 fi
 
