@@ -1387,14 +1387,15 @@ then
             OUTPUT_FILE=/dbbak/database/$(date +%Y%m%d)$(date +%H%M)fullback.xbstream
             echo "================================================================================"
             echo "You can use this command to create compressed full backup(recommanded on slave):"
-            echo "xtrabackup --defaults-file=$DEFAULTS_FILE --backup --user=root --password=$ROOT_PASSWD --parallel=4 --slave-info \\"
-            echo "--safe-slave-backup --stream=xbstream --compress --compress-threads=4 --target-dir=/dbbak/database \\"
+            echo "xtrabackup --defaults-file=$DEFAULTS_FILE --backup --user=root \\"
+            echo "--password=$ROOT_PASSWD --parallel=4 --slave-info \\"
+            echo "--safe-slave-backup --stream=xbstream --compress --compress-threads=4 \\"
             echo "--socket=$MYSQLD_SOCK 2>/dbbak/backup.log 1>$OUTPUT_FILE"
             echo "================================================================================"
             echo "You can use these two commands to uncompress backup:"
             echo "xbstream -x < $OUTPUT_FILE -C /dbbak/uncompress"
-            echo "xtrabackup -uroot -p$ROOT_PASSWD --socket=$MYSQLD_SOCK --decompress --remove-original \\"
-            echo "--target-dir=/dbbak/uncompress"
+            echo "xtrabackup -uroot -p$ROOT_PASSWD --socket=$MYSQLD_SOCK --decompress \\"
+            echo "--remove-original --target-dir=/dbbak/uncompress"
             echo "================================================================================"
         fi
     else
