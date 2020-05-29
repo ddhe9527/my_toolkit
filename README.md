@@ -2,10 +2,10 @@
 
 #### mycnf_helper主要有如下两个功能：
 
-1. 针对特定的服务器配置(CPU、内存、IOPS能力、是否使用SSD等)，生成适用于特定MySQL版本的my.cnf文件
+1. 针对特定的服务器配置(CPU、内存、IOPS能力、是否使用SSD等)，生成适用于特定MySQL版本的最佳实践my.cnf文件
 2. 在当前服务器上安装MySQL Server，并部署主从或双主复制
 
-上述两个功能可以单独使用，也可以一起使用。例如：可以先生成my.cnf文件后，人工检查确认，再使用-s参数安装部署。也可以跳过人工复核过程，直接生成并部署
+上述两个功能可以单独使用，也可以一起使用。例如：可以先生成my.cnf文件后，人工检查确认，再使用-s参数安装部署；也可以跳过人工复核过程，直接生成my.cnf并部署数据库实例。另外，mycnf_helper脚本逻辑已尽量做到幂等，如果中途执行报错，则清理中间文件或目录后，重复执行即可
 
 #### 选项说明：
 
@@ -24,7 +24,7 @@
 - -p：指定MySQL端口号，默认值为3306
 - -r：指定主从复制中的角色，该值必须为master或slave。如果不存在复制关系，则指定master即可
 - -s：在当前服务器上安装部署MySQL Server
-- -S：使用了SSD存储，影响innodb_flush_neighbors参数和IO Scheduler检查逻辑
+- -S：使用了SSD存储，影响innodb_flush_neighbors参数和I/O Scheduler检查逻辑
 - -t：安装辅助工具，包括XtraBackup工具等
 - -v：指定要安装的MySQL Server版本号
 - -x：指定主从或双主复制场景中，对端节点的IP地址。该IP将使用在当前节点执行的"CHANGE MASTER TO"命令中
@@ -34,16 +34,17 @@
 #### 注意事项：
 
 - 必须确保yum源可用，否则安装过程会报错
+- 安装过程中会修改Linux内核参数、调整mysql用户资源限制、关闭SELinux和防火墙等
 - 脚本会自动读取当前目录下与“-v”选项指定的版本号所对应的MySQL二进制包进行安装。例如：-v选项指定5.7.22，那么脚本会尝试在当前路径中查找类似"mysql-5.7.22-linux-glibc2.12-x86_64.tar.gz"的文件用于后续安装
 - 如果要安装辅助工具，例如XtraBackup，则相关依赖rpm包也必须存放在当前路径下
-- 成功安装后，会自动删除数据库中的匿名账号和test数据库，'root'@'localhost'账号将被保留
+- 成功安装后，会自动删除数据库中的匿名账号和test数据库
 - 成功安装后，会自动创建具有SUPER和REPLICATION SLAVE权限的'repl'@'%'，用于搭建复制
 - -v为强制选项，必须显式指定
 
 #### 使用范畴：
 
-- 支持64位CentOS/Red Hat 5.x, 6.x, 7.x, 8.x操作系统下执行安装部署
-- 支持MySQL 5.6.10及以上版本的安装部署
+- 操作系统：CentOS/Red Hat 5.X ~ 8.X x86_64
+- MySQL：5.6.10及以上版本
 
 #### 使用范例：
 
@@ -78,5 +79,113 @@
 ```
 服务器A：./mycnf_helper.sh -a -I 20000 -v 8.0.18 -S -s -n 192.168.90.100 -r master -i 1 -t -M 1
 服务器B：./mycnf_helper.sh -a -I 20000 -v 8.0.18 -S -s -n 192.168.90.100 -r master -i 2 -t -M 2 -x 192.168.90.135 -y 192.168.90.136
+```
+
+#### 附录：
+
+“范例一”生成的my.cnf文件内容：
+
+```
+[mysqld]
+user = mysql
+port = 3306
+server_id = 1
+basedir = /usr/local/mysql
+datadir = /mysql_data/data
+tmpdir = /mysql_data/tmp
+socket = /mysql_data/mysql.sock
+loose-mysqlx_socket = /mysql_data/mysqlx.sock
+pid_file = /mysql_data/mysql.pid
+autocommit = ON
+character_set_server = utf8mb4
+collation_server = utf8mb4_unicode_ci
+transaction_isolation = READ-COMMITTED
+lower_case_table_names = 1
+sync_binlog = 1
+secure_file_priv = /mysql_data/tmp
+log_bin = /mysql_data/binlog/bin.log
+binlog_format = ROW
+expire_logs_days = 15
+binlog_rows_query_log_events = ON
+log_bin_trust_function_creators = ON
+log_error = /mysql_data/error.log
+slow_query_log = ON
+slow_query_log_file = /mysql_data/slowlog/slow.log
+log_queries_not_using_indexes = ON
+log_throttle_queries_not_using_indexes = 10
+long_query_time = 2
+log_slow_admin_statements = ON
+log_slow_slave_statements = ON
+min_examined_row_limit = 100
+log_timestamps = SYSTEM
+sql_mode = NO_ENGINE_SUBSTITUTION,STRICT_TRANS_TABLES,NO_ZERO_DATE,NO_ZERO_IN_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_AUTO_CREATE_USER,ONLY_FULL_GROUP_BY
+table_open_cache_instances = 16
+max_connections = 800
+max_allowed_packet = 256M
+join_buffer_size = 2M
+read_buffer_size = 2M
+binlog_cache_size = 2M
+read_rnd_buffer_size = 2M
+key_buffer_size = 16M
+tmp_table_size = 32M
+max_heap_table_size = 32M
+interactive_timeout = 7200
+wait_timeout = 7200
+max_connect_errors = 1000000
+lock_wait_timeout = 3600
+thread_cache_size = 64
+myisam_sort_buffer_size = 32M
+binlog_error_action = ABORT_SERVER
+default_authentication_plugin = mysql_native_password
+innodb_file_per_table = ON
+innodb_file_format = Barracuda
+innodb_file_format_max = Barracuda
+innodb_large_prefix = ON
+innodb_flush_log_at_trx_commit = 1
+innodb_stats_persistent_sample_pages = 128
+innodb_buffer_pool_size = 11400M
+innodb_buffer_pool_instances = 8
+innodb_read_io_threads = 16
+innodb_write_io_threads = 8
+innodb_purge_threads = 4
+innodb_page_cleaners = 8
+innodb_flush_neighbors = 1
+innodb_io_capacity = 2500
+innodb_flush_method = O_DIRECT
+innodb_log_file_size = 2048M
+innodb_log_group_home_dir = /mysql_data/redolog
+innodb_log_files_in_group = 4
+innodb_log_buffer_size = 32M
+innodb_undo_directory = /mysql_data/undolog
+innodb_undo_tablespaces = 3
+innodb_undo_log_truncate = ON
+innodb_max_undo_log_size = 4G
+innodb_checksum_algorithm = crc32
+innodb_thread_concurrency = 8
+innodb_lock_wait_timeout = 10
+innodb_temp_data_file_path = ibtmp1:12M:autoextend:max:96G
+innodb_print_all_deadlocks = ON
+innodb_strict_mode = ON
+innodb_autoinc_lock_mode = 2
+innodb_online_alter_log_max_size = 2G
+innodb_sort_buffer_size = 2M
+innodb_rollback_on_timeout = ON
+skip_name_resolve = ON
+performance_schema_instrument = "wait/lock/metadata/sql/mdl=ON"
+event_scheduler = ON
+read_only = OFF
+super_read_only = OFF
+log_slave_updates = ON
+gtid_mode = ON
+enforce_gtid_consistency = ON
+relay_log = /mysql_data/relaylog/relay.log
+master_info_repository = TABLE
+relay_log_info_repository = TABLE
+relay_log_recovery = ON
+skip_slave_start = ON
+plugin_load = "rpl_semi_sync_master=semisync_master.so;rpl_semi_sync_slave=semisync_slave.so"
+rpl_semi_sync_master_enabled = ON
+rpl_semi_sync_slave_enabled = ON
+rpl_semi_sync_master_timeout = 5000
 ```
 
