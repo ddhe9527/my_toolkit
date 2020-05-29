@@ -1,3 +1,9 @@
+这是一个自用的MySQL工具集，后续将逐步增加更多脚本
+
+Email：heduoduo321@163.com
+
+
+
 ## mycnf_helper
 
 #### mycnf_helper主要有如下两个功能：
