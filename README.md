@@ -21,7 +21,7 @@ Email：heduoduo321@163.com
 - -d：指定安装MySQL的datadir的上层目录，默认值为/mysql_data
 - -f：指定安装MySQL时要使用的my.cnf文件
 - -h：打印帮助信息
-- -i：指定server_id，默认值为1
+- -i：指定server_id，默认值为0~32767之间的随机数
 - -I：指定IOPS能力，默认值4000
 - -m：指定内存容量大小，单位GB，并且不能小于1GB
 - -M：开启双主复制，并指定auto_increment_offset参数值，该值必须为1或2

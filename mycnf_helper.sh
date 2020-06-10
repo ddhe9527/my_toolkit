@@ -7,7 +7,7 @@ BASE_DIR=/usr/local/mysql
 TMP_FILE=/tmp/mycnf_helper.log
 MY_PORT=3306
 IO_CAP=4000
-SERVER_ID=1
+SERVER_ID=$RANDOM
 ROOT_PASSWD=Mycnf_helper123!    ##password for 'root'@'localhost' with ALL privilege
 REPL_PASSWD=Mycnf_helper456!    ##password for 'repl'@'%' with REPLICATION SLAVE and SUPER privilege
 
@@ -56,7 +56,7 @@ Usage:
 -d: <string> MySQL initial data directory(default: /mysql_data)
 -f: <string> specify a my.cnf for MySQL Server setup(this file should have mycnf_helper fingerprint)
 -h:          print help information
--i: <number> server_id(default: 1)
+-i: <number> server_id(default: random number between 0 and 32767)
 -I: <number> IO capacity(IOPS) of the storage(default: 4000)
 -m: <number> memory capacity(unit: GB)
 -M: <number> use master-master replication and specify auto_increment_offset(1 or 2)
