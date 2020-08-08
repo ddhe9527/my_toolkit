@@ -722,6 +722,13 @@ then
 fi
 
 
+## Try to fix "mysql: error while loading shared libraries: libtinfo.so.5" error
+if [ ! -f "/usr/lib64/libtinfo.so.5" ] && [ -f "/usr/lib64/libtinfo.so.6.1" ]
+then
+	ln -s /usr/lib64/libtinfo.so.6.1 /usr/lib64/libtinfo.so.5
+fi
+
+
 ## Tune Linux kernel parameter
 if [ `cat /etc/sysctl.conf | grep mycnf_helper_fingerprint | wc -l` -eq 0 ]
 then
@@ -1112,7 +1119,7 @@ fi
 
 
 ## Postinstallation: set root@localhost's password
-echo "Postinstallation: set root@localhost's password: '$ROOT_PASSWD'"
+echo -e "Postinstallation: set root@localhost's password: '\033[31m$ROOT_PASSWD\033[0m'"
 $BASE_DIR/bin/mysqladmin -uroot -S$MYSQLD_SOCK password $ROOT_PASSWD 1>/dev/null 2>&1
 if [ $? -ne 0 ]
 then
@@ -1137,7 +1144,7 @@ then
     echo "Cleaning up anonymous database account, test database, and create replication account failed, quit"
     exit 1
 fi
-echo "Postinstallation: replication database account 'repl' has been created, password: '$REPL_PASSWD'"
+echo -e "Postinstallation: replication database account 'repl' has been created, password: '\033[31m$REPL_PASSWD\033[0m'"
 
 
 ## Establish replication relationship
