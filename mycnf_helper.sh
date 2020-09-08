@@ -129,35 +129,35 @@ function error_quit(){
 while getopts "ab:c:d:f:hi:I:m:M:n:o:p:r:sStv:x:y:z" opt
 do
     case $opt in
-        a)  
+        a)
             CPU_CORE_COUNT=`cat /proc/cpuinfo | grep -c processor`
             MEM_CAP=`cat /proc/meminfo | grep MemTotal | awk '{print $2}'`
             let MEM_CAP=$MEM_CAP/1024/1024;;
-        b)  
+        b)
             BASE_DIR=$OPTARG;;
-        c)  
+        c)
             CPU_CORE_COUNT=$OPTARG;;
-        d)  
+        d)
             DATA_DIR=$OPTARG;;
-        f)  
+        f)
             F_FILE=$OPTARG
             SKIP_GENERATE_MYCNF=1;;
-        h)  
+        h)
             usage
             exit 0;;
-        i)  
+        i)
             SERVER_ID=$OPTARG;;
-        I)  
+        I)
             IO_CAP=$OPTARG;;
-        m)  
+        m)
             MEM_CAP=$OPTARG;;
-        M)  
+        M)
             MM_FLAG=1
             AUTO_INCREMENT_OFFSET=$OPTARG;;
-        n)  
+        n)
             NTP_FLAG=1
             NTP_SERVER=$OPTARG;;
-        o)  
+        o)
             MY_CNF=$OPTARG;;
         p)
             MY_PORT=$OPTARG;;
