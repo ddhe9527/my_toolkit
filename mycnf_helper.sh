@@ -728,8 +728,18 @@ net.core.rmem_default = 8388608
 net.core.rmem_max = 16777216
 kernel.hung_task_timeout_secs = 0
 kernel.core_pattern = /var/log/core.%t
-fs.file-max = 2000000
-vm.swappiness = 1' >> /etc/sysctl.conf
+fs.file-max = 2000000' >> /etc/sysctl.conf
+
+    ##vm.swappiness=1 or 0 depends on Linux kernel version, the goal is avoiding OOM killer
+    KERNEL_VERSION=`uname -r | awk -F'.' '{print $1$2}'`
+    if [[ $KERNEL_VERSION -lt 35 ]]
+    then
+        ##Linux 3.4 and below
+        echo 'vm.swappiness = 0' >> /etc/sysctl.conf
+    else
+        ##Linux 3.5 and above
+        echo 'vm.swappiness = 1' >> /etc/sysctl.conf
+    fi
 
     ##kernel.shmmax=innodb_buffer_pool_size*1.2
     let SHMMAX=$BUFFER_POOL*1024*1024*6/5
