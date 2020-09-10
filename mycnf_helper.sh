@@ -731,8 +731,9 @@ kernel.core_pattern = /var/log/core.%t
 fs.file-max = 2000000' >> /etc/sysctl.conf
 
     ##vm.swappiness=1 or 0 depends on Linux kernel version, the goal is avoiding OOM killer
+    KERNEL_VERSION_MAJOR=`uname -r | awk -F'.' '{print $1}'`
     KERNEL_VERSION=`uname -r | awk -F'.' '{print $1$2}'`
-    if [[ $KERNEL_VERSION -lt 35 ]]
+    if [[ $KERNEL_VERSION_MAJOR -lt 3 || $KERNEL_VERSION -lt 35 ]]
     then
         ##Linux 3.4 and below
         echo 'vm.swappiness = 0' >> /etc/sysctl.conf
