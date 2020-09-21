@@ -822,9 +822,9 @@ fi
 echo "Installing necessary packages..."
 if [ $OS_VER_NUM -lt 8 ]
 then
-    yum install -y net-tools libaio libaio-devel numactl-libs autoconf ntp xz perl-Module* &>/dev/null
+    yum install -y net-tools libaio libaio-devel numactl-libs numactl autoconf ntp xz perl-Module* &>/dev/null
 else
-    yum install -y net-tools libaio libaio-devel numactl-libs autoconf xz perl-Module* &>/dev/null
+    yum install -y net-tools libaio libaio-devel numactl-libs numactl autoconf xz perl-Module* &>/dev/null
 fi
 if [ $? -eq 1 ]
 then
