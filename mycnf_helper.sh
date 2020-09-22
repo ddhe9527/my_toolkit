@@ -288,19 +288,6 @@ then
         fi
     fi
 
-    ## Check replication role
-    if [ `echo $REPL_ROLE | grep -ic slave` -eq 1 ]
-    then
-        REPL_ROLE=S
-        echo "Replication role: slave"
-    elif [ `echo $REPL_ROLE | grep -ic master` -eq 1 ]
-    then
-        REPL_ROLE=M
-        echo "Replication role: master"
-    else
-        error_quit "Replication role must be master or slave, use -r to specify"
-    fi
-
     ## Check AUTO_INCREMENT_OFFSET
     if [ $MM_FLAG -eq 1 ]
     then
@@ -324,6 +311,20 @@ else
     else
         error_quit "$F_FILE does not exists"
     fi
+fi
+
+
+## Check replication role
+if [ `echo $REPL_ROLE | grep -ic slave` -eq 1 ]
+then
+    REPL_ROLE=S
+    echo "Replication role: slave"
+elif [ `echo $REPL_ROLE | grep -ic master` -eq 1 ]
+then
+    REPL_ROLE=M
+    echo "Replication role: master"
+else
+    error_quit "Replication role must be master or slave, use -r to specify"
 fi
 
 
