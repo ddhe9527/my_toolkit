@@ -21,15 +21,15 @@ Enjoy and free to use at your own risk~'
 }
 
 
-## Function: Check Redis version number whether it's valid or not
+## Function: Convert Redis version number to nine-digit format
 ## $#: 1
 ## $1: Redis version number, like 3.2.14, 6.0.9 etc.
-## Return: 0 if it's valid, 1 if not, -1 if error occured
+## Return: nine-digit format version number, '000000000' if error occured
 function version_check()
 {
     if [ $# -ne 1 ]
     then
-        return -1
+        return 000000000
     fi
     
     
