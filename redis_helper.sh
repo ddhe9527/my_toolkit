@@ -115,6 +115,12 @@ function default_redis_config()
     fi
 
     VERSION_STR=$1
+    if [ $VERSION_STR -lt 003000000 ]
+    then
+        echo 'default_redis_config: Out of supported version'
+        return 1
+    fi
+
     TARGET_FILE=$2
     TEMP_FILE="/tmp/"$RANDOM
 
