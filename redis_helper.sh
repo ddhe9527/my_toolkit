@@ -98,7 +98,7 @@ function file_dir_exist_check()
 ## $#: 2
 ## $1: nine-digit format Redis version, like 003002014, 006000009 etc.
 ## $2: Output file name
-## Return: 0 if it succeed in writing output file, -1 if error occured
+## Return: 0 if it succeed in writing output file, 1 if error occured
 function default_redis_config()
 {
     if [ $# -ne 2 ]
@@ -293,7 +293,7 @@ function default_redis_config()
 ## $#: 2
 ## $1: nine-digit format Redis version, like 003002014, 006000009 etc.
 ## $2: Output file name
-## Return: 0 if it succeed in writing output file, -1 if error occured
+## Return: 0 if it succeed in writing output file, 1 if error occured
 function default_sentinel_config()
 {
     if [ $# -ne 2 ]
