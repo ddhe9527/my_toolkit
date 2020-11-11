@@ -16,6 +16,8 @@ Usage:
 
 -h:          print help information
 
+-v: <string> Redis Server version. eg: 3.0.6, 3.2.13, 4.0.1, 5.0.2, 6.0.9
+
 =====================================================================================================
 Github: https://github.com/ddhe9527/my_toolkit
 Email : heduoduo321@163.com
@@ -36,18 +38,18 @@ function error_quit(){
 ## Function: Convert Redis version number to nine-digit format
 ## $#: 1
 ## $1: Original Redis version number, like 3.2.14, 6.0.9 etc.
-## Return: nine-digit format version number, '000000000' if error occured
+## Return: 0 if succeed in parsing, 1 if error occured
 function version_format()
 {
     if [ $# -ne 1 ]
     then
-        echo "000000000"
+        echo 'version_format->parameter error'
         return 1
     fi
 
     if [ `echo $1 | grep -E '^[1-9][0-9]{0,2}(\.([0-9]|[1-9][0-9]{0,2})){2}$' | wc -l` -eq 0 ]
     then
-        echo "000000000"
+        echo 'version_format->unable to parse version string'
         return 1
     fi
 
@@ -294,7 +296,7 @@ function default_redis_config()
     echo '006000002@999999999@# aof_rewrite_cpulist' >> $TEMP_FILE
     echo '006000002@999999999@# bgsave_cpulist' >> $TEMP_FILE
 
-    echo '##########################################redis_helper_fingerprint' > $TARGET_FILE
+    echo "##########################################redis_helper_fingerprint_$VERSION_STR" > $TARGET_FILE
     IFS=$'\n'
     for I in `cat $TEMP_FILE`
     do
@@ -306,7 +308,7 @@ function default_redis_config()
             echo $VAR >> $TARGET_FILE
         fi
     done
-    echo '##########################################redis_helper_fingerprint' >> $TARGET_FILE
+    echo "##########################################redis_helper_fingerprint_$VERSION_STR" >> $TARGET_FILE
 
     /usr/bin/rm -rf $TEMP_FILE
     return 0
@@ -366,7 +368,7 @@ function default_sentinel_config()
     echo '004000011@999999999@sentinel deny-scripts-reconfig yes' >> $TEMP_FILE
     echo '005000000@999999999@# SENTINEL rename-command' >> $TEMP_FILE
 
-    echo '##########################################redis_helper_fingerprint' > $TARGET_FILE
+    echo "##########################################redis_helper_fingerprint_$VERSION_STR" > $TARGET_FILE
     IFS=$'\n'
     for I in `cat $TEMP_FILE`
     do
@@ -378,7 +380,7 @@ function default_sentinel_config()
             echo $VAR >> $TARGET_FILE
         fi
     done
-    echo '##########################################redis_helper_fingerprint' >> $TARGET_FILE
+    echo "##########################################redis_helper_fingerprint_$VERSION_STR" >> $TARGET_FILE
 
     /usr/bin/rm -rf $TEMP_FILE
     return 0
