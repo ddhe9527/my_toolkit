@@ -1,28 +1,45 @@
 #!/bin/sh
 
-## Default values
 
+## Default values
+REDIS_CONFIG_FILE=$PWD/redis.conf
+SENTINEL_CONFIG_FILE=$PWD/sentinel.conf
+LOWEST_VERSION='003000000'
+MEM_CAP=`cat /proc/meminfo | grep MemTotal | awk '{print $2}'`
+let MEM_CAP=$MEM_CAP/1024-200
+MEM_USED=$MEM_CAP"mb"
 
 
 ## Flags(internal use)
+SET_VERSION_FLAG=0
+SET_DIR_FLAG=0
+SET_MEM_FLAG=0
+SET_PORT_FLAG=0
+SENTINEL_FLAG=0
+SKIP_GENERATE_CNF=0
+SETUP_FLAG=0
+SET_OUTPUT_FLAG=0
 
 
-
-## Function: -h option, print help information and exit 0
+## Function: -h option, print help information
 function usage()
 {
-echo '=====================================================================================================
+echo "=====================================================================================================
 Usage:
-
--h:          print help information
-
+-d: <string> redis dir(default: ./)
+-f: <string> specify a configuration file for installation(this file should have redis_helper fingerprint)
+-h:          print help information and quit
+-m: <number> specify maxmemory with 'mb' unit(default: total memory capacity minus 200mb)
+-o: <string> destination of configuration file(default: \$PWD/redis.conf or \$PWD/sentinel.conf)
+-p: <number> port(default: 6379)
+-s:          installation type: sentinel
+-S:          install redis binary program and start the instance
 -v: <string> Redis Server version. eg: 3.0.6, 3.2.13, 4.0.1, 5.0.2, 6.0.9
-
 =====================================================================================================
 Github: https://github.com/ddhe9527/my_toolkit
 Email : heduoduo321@163.com
 
-Enjoy and free to use at your own risk~'
+Enjoy and free to use at your own risk~"
 }
 
 
@@ -30,7 +47,7 @@ Enjoy and free to use at your own risk~'
 ## $#: 1
 ## $1: Error message
 function error_quit(){
-    echo `tput setaf 1; tput bold`"Error: "$1`tput sgr0`
+    echo `tput setaf 1; tput bold`"error: "$1`tput sgr0`
     exit 1
 }
 
@@ -47,7 +64,7 @@ function version_format()
         return 1
     fi
 
-    if [ `echo $1 | grep -E '^[1-9][0-9]{0,2}(\.([0-9]|[1-9][0-9]{0,2})){2}$' | wc -l` -eq 0 ]
+    if [ `echo $1 | grep -cE '^[1-9][0-9]{0,2}(\.([0-9]|[1-9][0-9]{0,2})){2}$'` -eq 0 ]
     then
         echo 'version_format->unable to parse version string'
         return 1
@@ -65,7 +82,15 @@ function version_format()
     let VER_LEN=${#MINOR_VER}-3
     MINOR_VER=${MINOR_VER:$VER_LEN}
 
-    echo "$MAJOR_VER$MIDDLE_VER$MINOR_VER"
+    ##Only support redis 3.0.0 and above
+    FORMATED_VER="$MAJOR_VER$MIDDLE_VER$MINOR_VER"
+    if [[ 10#$FORMATED_VER -lt 10#$LOWEST_VERSION ]]
+    then
+        echo 'version_format->out of supported version'
+        return 1
+    fi
+
+    echo $FORMATED_VER
     return 0
 }
 
@@ -88,10 +113,10 @@ function file_dir_exist_check()
         return 1
     fi
 
-    DIR=${1%/*}
-    if [ ! -d $DIR ]
+    V_DIR=${1%/*}
+    if [ ! -d $V_DIR ]
     then
-        echo 'file_dir_exist_check->directory does not exists'
+        echo "file_dir_exist_check->$V_DIR directory does not exist"
         return 1
     fi
 
@@ -121,14 +146,15 @@ function default_redis_config()
     fi
 
     VERSION_STR=$1
-    if [[ 10#$VERSION_STR -lt 10#003000000 ]]
+    TARGET_FILE=$2
+
+    TEMP_FILE="/tmp/"$RANDOM
+    RET=$(file_dir_exist_check $TEMP_FILE)
+    if [ $? -ne 0 ]
     then
-        echo 'default_redis_config->out of supported version'
+        echo 'default_redis_config->'$RET
         return 1
     fi
-
-    TARGET_FILE=$2
-    TEMP_FILE="/tmp/"$RANDOM
 
     echo '003000000@999999999@# include' > $TEMP_FILE
     echo '004000000@999999999@# loadmodule' >> $TEMP_FILE
@@ -296,7 +322,7 @@ function default_redis_config()
     echo '006000002@999999999@# aof_rewrite_cpulist' >> $TEMP_FILE
     echo '006000002@999999999@# bgsave_cpulist' >> $TEMP_FILE
 
-    echo "##########################################redis_helper_fingerprint_$VERSION_STR" > $TARGET_FILE
+    echo "##########################################redis_helper_fingerprint_normal_$VERSION_STR" > $TARGET_FILE
     IFS=$'\n'
     for I in `cat $TEMP_FILE`
     do
@@ -308,7 +334,7 @@ function default_redis_config()
             echo $VAR >> $TARGET_FILE
         fi
     done
-    echo "##########################################redis_helper_fingerprint_$VERSION_STR" >> $TARGET_FILE
+    echo "##########################################redis_helper_fingerprint_normal_$VERSION_STR" >> $TARGET_FILE
 
     /usr/bin/rm -rf $TEMP_FILE
     return 0
@@ -337,14 +363,15 @@ function default_sentinel_config()
     fi
 
     VERSION_STR=$1
-    if [[ 10#$VERSION_STR -lt 10#003000000 ]]
+    TARGET_FILE=$2
+
+    TEMP_FILE="/tmp/"$RANDOM
+    RET=$(file_dir_exist_check $TEMP_FILE)
+    if [ $? -ne 0 ]
     then
-        echo 'default_sentinel_config->out of supported version'
+        echo 'default_sentinel_config->'$RET
         return 1
     fi
-
-    TARGET_FILE=$2
-    TEMP_FILE="/tmp/"$RANDOM   
 
     echo '003002004@999999999@# bind' > $TEMP_FILE
     echo '003002004@999999999@# protected-mode' >> $TEMP_FILE
@@ -368,7 +395,7 @@ function default_sentinel_config()
     echo '004000011@999999999@sentinel deny-scripts-reconfig yes' >> $TEMP_FILE
     echo '005000000@999999999@# SENTINEL rename-command' >> $TEMP_FILE
 
-    echo "##########################################redis_helper_fingerprint_$VERSION_STR" > $TARGET_FILE
+    echo "##########################################redis_helper_fingerprint_sentinel_$VERSION_STR" > $TARGET_FILE
     IFS=$'\n'
     for I in `cat $TEMP_FILE`
     do
@@ -380,9 +407,191 @@ function default_sentinel_config()
             echo $VAR >> $TARGET_FILE
         fi
     done
-    echo "##########################################redis_helper_fingerprint_$VERSION_STR" >> $TARGET_FILE
+    echo "##########################################redis_helper_fingerprint_sentinel_$VERSION_STR" >> $TARGET_FILE
 
     /usr/bin/rm -rf $TEMP_FILE
     return 0
 }
+
+
+## Phase options
+while getopts "d:f:hm:o:p:sSv:" opt
+do
+    case $opt in
+        d)
+            SET_DIR_FLAG=1
+            DIR=$OPTARG;;
+        f)
+            SKIP_GENERATE_CNF=1
+            CNF_FILE=$OPTARG;;
+        h)
+            usage
+            exit 0;;
+        m)
+            SET_MEM_FLAG=1
+            MEM_USED=$OPTARG;;
+        o)
+            SET_OUTPUT_FLAG=1
+            OUTPUT_FILE=$OPTARG;;
+        p)
+            SET_PORT_FLAG=1
+            PORT=$OPTARG;;
+        s)
+            SENTINEL_FLAG=1;;
+        S)
+            SETUP_FLAG=1;;
+        v)
+            SET_VERSION_FLAG=1
+            SERVER_VERSION=$OPTARG;;
+        *)
+            error_quit "Unknown option, try -h for more information";;
+    esac
+done
+
+## -v option is mandatory
+if [ $SET_VERSION_FLAG -eq 1 ]
+then
+    RET=$(version_format $SERVER_VERSION)
+    if [ $? -ne 0 ]
+    then
+        error_quit "$RET"
+    else
+        INTERNAL_SERVER_VERSION=$RET
+        echo "Target version: $SERVER_VERSION($INTERNAL_SERVER_VERSION)"
+    fi
+else
+    error_quit "-v option is mandatory, please specify"
+fi
+
+## Phase necessary configuration from file
+if [ $SKIP_GENERATE_CNF -eq 1 ]
+then
+    if [ $SETUP_FLAG -eq 1 ]
+    then
+        if [ -f $CNF_FILE ]
+        then
+            if [[ `head -1 $CNF_FILE | grep -c redis_helper_fingerprint` -eq 1 && `tail -1 $CNF_FILE | grep -c redis_helper_fingerprint` -eq 1 ]]
+            then
+                CNF_FILE_HEADER=`head -1 $CNF_FILE`
+                CNF_FILE_HEADER_LEN=${#CNF_FILE_HEADER}
+                let CNF_FILE_HEADER_LEN=$CNF_FILE_HEADER_LEN-9
+                CNF_FILE_VERSION=${CNF_FILE_HEADER:$CNF_FILE_HEADER_LEN}
+                if [ "$CNF_FILE_VERSION" != "$INTERNAL_SERVER_VERSION" ]
+                then
+                    error_quit "There's mismatch version information bewteen -f and -v options"
+                fi
+
+                if [ `echo $CNF_FILE_HEADER | grep -c sentinel` -eq 0]
+                then
+                    SENTINEL_FLAG=0
+                else
+                    SENTINEL_FLAG=1
+                fi
+
+                ## port
+                if [ `cat $CNF_FILE  | grep -cw ^port` -eq 1 ]
+                then
+                    PORT=`cat $CNF_FILE | grep -w ^port | awk '{print $2}'`
+                else
+                    error_quit "Phase 'port' from $CNF_FILE failed"
+                fi
+
+                ## dir
+                if [ `cat $CNF_FILE  | grep -cw ^dir` -eq 1 ]
+                then
+                    DIR=`cat $CNF_FILE | grep -w ^dir | awk '{print $2}'`
+                else
+                    error_quit "Phase 'dir' from $CNF_FILE failed"
+                fi
+
+                ## maxmemory
+                if [ $SENTINEL_FLAG -eq 0 ]
+                then
+                    if [ `cat $CNF_FILE | grep -cw ^maxmemory` -eq 1 ]
+                    then
+                        MEM_USED=`cat $CNF_FILE | grep -w ^maxmemory | awk '{print $2}'`
+                    else
+                        error_quit "'maxmemory' is recommended for avoiding OOM"
+                    fi
+                fi
+            else
+                error_quit "$CNF_FILE is broken to be used"
+            fi
+        else
+            error_quit "$CNF_FILE does not exist"
+        fi
+    else
+        echo `tput bold`"Nothing needs to be done."`tput sgr0`
+        exit 0
+    fi
+fi
+
+## Check configuration values
+if [[ $SKIP_GENERATE_CNF -eq 1 || $SET_MEM_FLAG -eq 1 ]]
+then
+    if [ `echo $MEM_USED | grep -cE '^[1-9][0-9]*mb$'` -eq 0 ]
+    then
+        error_quit "Unrecognized 'maxmemory' value, must be with lowercase 'mb' suffix unit"
+    fi
+fi
+
+if [[ $SKIP_GENERATE_CNF -eq 1 || $SET_PORT_FLAG -eq 1 ]]
+then
+    if [ `echo $PORT | grep -cE '^[1-9][0-9]*$'` -eq 0 ]
+    then
+        error_quit "Unrecognized 'port' value, must be digit"
+    fi
+fi
+
+if [ $SET_OUTPUT_FLAG -eq 0 ]
+then
+    if [ $SENTINEL_FLAG -eq 0 ]
+    then
+        OUTPUT_FILE=$REDIS_CONFIG_FILE
+    else
+        OUTPUT_FILE=$SENTINEL_CONFIG_FILE
+    fi
+fi
+
+## Genarate a configuration file
+if [ $SKIP_GENERATE_CNF -eq 0 ]
+then
+    RET=$(file_dir_exist_check $OUTPUT_FILE)
+    if [ $? -eq 1 ]
+    then
+        error_quit "Check destination of configuration file->$RET"
+    else
+        if [ -f $OUTPUT_FILE ]
+        then
+            error_quit "$OUTPUT_FILE already exists, overwriting is unsafe"
+        fi
+    fi
+
+    if [ $SENTINEL_FLAG -eq 0 ]
+    then
+        RET=$(default_redis_config $INTERNAL_SERVER_VERSION $OUTPUT_FILE)
+    else
+        RET=$(default_sentinel_config $INTERNAL_SERVER_VERSION $OUTPUT_FILE)
+    fi
+
+    if [ $? -eq 1 ]
+    then
+        error_quit "Create default configuration file failed->$RET"
+    fi
+
+    ## Twist the configuration file
+    if [ $SET_DIR_FLAG -eq 1 ]
+    then
+        sed -i "s|^dir.*|dir $DIR|g" $OUTPUT_FILE
+    fi
+
+    if [ $SET_PORT_FLAG -eq 1 ]
+    then
+        sed -i "s|^port.*|port $PORT|g" $OUTPUT_FILE
+    fi
+
+    sed -i "s|^# maxmemory$|maxmemory $MEM_USED|g" $OUTPUT_FILE
+    sed -i "s|^bind.*|bind 0.0.0.0|g" $OUTPUT_FILE
+    sed -i "s|^# bind$|bind 0.0.0.0|g" $OUTPUT_FILE
+fi
 
