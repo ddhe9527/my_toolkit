@@ -19,6 +19,10 @@ SENTINEL_FLAG=0
 SKIP_GENERATE_CNF=0
 SETUP_FLAG=0
 SET_OUTPUT_FLAG=0
+SET_RDB_FLAG=0
+SET_AOF_FLAG=0
+SET_REPL_FLAG=0
+SET_CLUSTER_FLAG=0
 
 
 ## Function: -h option, print help information
@@ -26,12 +30,16 @@ function usage()
 {
 echo "=====================================================================================================
 Usage:
+-A：         enable AOF persistence(default: disable)
+-c:          enable Redis Cluster mode(default: disable)
 -d: <string> redis dir(default: ./)
 -f: <string> specify a configuration file for installation(this file should have redis_helper fingerprint)
 -h:          print help information and quit
 -m: <number> specify maxmemory with 'mb' unit(default: total memory capacity minus 200mb)
 -o: <string> destination of configuration file(default: \$PWD/redis.conf or \$PWD/sentinel.conf)
 -p: <number> port(default: 6379)
+-r: <string> set replicaof(slaveof), format: IP:PORT. eg: -r 192.168.0.2:6379
+-R:          enable RDB persistence(default: disable)
 -s:          installation type: sentinel
 -S:          install redis binary program and start the instance
 -v: <string> Redis Server version. eg: 3.0.6, 3.2.13, 4.0.1, 5.0.2, 6.0.9
@@ -415,9 +423,13 @@ function default_sentinel_config()
 
 
 ## Phase options
-while getopts "d:f:hm:o:p:sSv:" opt
+while getopts "Acd:f:hm:o:p:r:RsSv:" opt
 do
     case $opt in
+        A)
+            SET_AOF_FLAG=1;;
+        c)
+            SET_CLUSTER_FLAG=1;;
         d)
             SET_DIR_FLAG=1
             DIR=$OPTARG;;
@@ -436,6 +448,11 @@ do
         p)
             SET_PORT_FLAG=1
             PORT=$OPTARG;;
+        r)
+            SET_REPL_FLAG=1
+            REPLOF=$OPTARG;;
+        R)
+            SET_RDB_FLAG=1;;
         s)
             SENTINEL_FLAG=1;;
         S)
@@ -553,6 +570,16 @@ then
     fi
 fi
 
+if [ $SET_REPL_FLAG -eq 1 ]
+then
+    if [ `echo $REPLOF | grep -cE '^((2[0-4][0-9]|25[0-5]|[01]?[0-9][0-9]?)\.){3}(2[0-4][0-9]|25[0-5]|[01]?[0-9][0-9]?):[1-9][0-9]*$'` -eq 0 ]
+    then
+        error_quit "Can not phase -r option to IP:PORT format"
+    fi
+    MASTER_IP=`echo $REPLOF | cut -d ':' -f 1`
+    MASTER_PORT=`echo $REPLOF | cut -d ':' -f 2`
+fi
+
 ## Genarate a configuration file
 if [ $SKIP_GENERATE_CNF -eq 0 ]
 then
@@ -579,19 +606,123 @@ then
         error_quit "Create default configuration file failed->$RET"
     fi
 
-    ## Twist the configuration file
+    ## Twist the configuration file  
+    ## dir
     if [ $SET_DIR_FLAG -eq 1 ]
     then
+        DIR_LEN=${#DIR}
+        if [ ${DIR:$DIR_LEN-1:1} != '/' ]
+        then
+            DIR=$DIR'/'
+        fi
         sed -i "s|^dir.*|dir $DIR|g" $OUTPUT_FILE
     fi
+    DIR=`cat $OUTPUT_FILE | grep -w ^dir | awk '{print $2}'`
 
+    ## port
     if [ $SET_PORT_FLAG -eq 1 ]
     then
         sed -i "s|^port.*|port $PORT|g" $OUTPUT_FILE
     fi
+    PORT=`cat $OUTPUT_FILE | grep -w ^port | awk '{print $2}'`
 
+    ## maxmemory
     sed -i "s|^# maxmemory$|maxmemory $MEM_USED|g" $OUTPUT_FILE
+
+    ## maxmemory-policy volatile-ttl
+    sed -i "s|^# maxmemory-policy$|maxmemory-policy volatile-ttl|g" $OUTPUT_FILE
+
+    ## bind 0.0.0.0
     sed -i "s|^bind.*|bind 0.0.0.0|g" $OUTPUT_FILE
     sed -i "s|^# bind$|bind 0.0.0.0|g" $OUTPUT_FILE
+
+    ## tcp-keepalive 60
+    sed -i "s|^tcp-keepalive.*|tcp-keepalive 60|g" $OUTPUT_FILE
+
+    ## daemonize yes
+    sed -i "s|^daemonize.*|daemonize yes|g" $OUTPUT_FILE
+
+    ## pidfile
+    TMP_STR=$DIR'redis_'$PORT'.pid'
+    sed -i "s|^pidfile.*|pidfile $TMP_STR|g" $OUTPUT_FILE
+
+    ## logfile
+    TMP_STR=$DIR'redis_'$PORT'.log'
+    sed -i "s|^logfile.*|logfile $TMP_STR|g" $OUTPUT_FILE
+
+    ## save
+    if [ $SET_RDB_FLAG -eq 0 ]
+    then
+        sed -i "s|^save.*|# &|g" $OUTPUT_FILE
+    fi
+
+    ## dbfilename
+    sed -i "s|^dbfilename.*|dbfilename dump_$PORT.rdb|g" $OUTPUT_FILE
+
+    ## replicaof/slaveof
+    if [ $SET_REPL_FLAG -eq 1 ]
+    then
+        sed -i "s|^# replicaof$|replicaof $MASTER_IP $MASTER_PORT|g" $OUTPUT_FILE
+        sed -i "s|^# slaveof$|slaveof $MASTER_IP $MASTER_PORT|g" $OUTPUT_FILE
+    fi
+
+    ## repl-timeout 60
+    sed -i "s|^# repl-timeout$|repl-timeout 60|g" $OUTPUT_FILE
+
+    ## repl-backlog-size: 10MB for every 1GB of maxmemory
+    TMP_STR=${#MEM_USED}
+    TMP_STR=${MEM_USED:0:$TMP_STR-2}
+    let TMP_STR=$TMP_STR/100
+    TMP_STR=$TMP_STR'mb'
+    sed -i "s|^# repl-backlog-size$|repl-backlog-size $TMP_STR|g" $OUTPUT_FILE
+
+    ## repl-backlog-ttl 7200
+    sed -i "s|^# repl-backlog-ttl$|repl-backlog-ttl 7200|g" $OUTPUT_FILE
+
+    ## maxclients 10000
+    sed -i "s|^# maxclients$|maxclients 10000|g" $OUTPUT_FILE
+
+    ## enable lazyfree
+    sed -i "s|^lazyfree-lazy-eviction.*|lazyfree-lazy-eviction yes|g" $OUTPUT_FILE
+    sed -i "s|^lazyfree-lazy-expire.*|lazyfree-lazy-expire yes|g" $OUTPUT_FILE
+    sed -i "s|^lazyfree-lazy-server-del.*|lazyfree-lazy-server-del yes|g" $OUTPUT_FILE
+    sed -i "s|^slave-lazy-flush.*|slave-lazy-flush yes|g" $OUTPUT_FILE
+    sed -i "s|^replica-lazy-flush.*|replica-lazy-flush yes|g" $OUTPUT_FILE
+    sed -i "s|^lazyfree-lazy-user-del.*|lazyfree-lazy-user-del yes|g" $OUTPUT_FILE
+
+    ## AOF Persistence
+    if [ $SET_AOF_FLAG -eq 1 ]
+    then
+        sed -i "s|^appendonly.*|appendonly yes|g" $OUTPUT_FILE
+    fi
+
+    ## appendfilename
+    sed -i "s|^appendfilename.*|appendfilename appendonly_$PORT.aof|g" $OUTPUT_FILE
+
+    ## no-appendfsync-on-rewrite yes
+    sed -i "s|^no-appendfsync-on-rewrite.*|no-appendfsync-on-rewrite yes|g" $OUTPUT_FILE
+
+    ## cluster mode
+    if [ $SET_CLUSTER_FLAG -eq 1 ]
+    then
+        sed -i "s|^# cluster-enabled$|cluster-enabled yes|g" $OUTPUT_FILE
+        sed -i "s|^# cluster-config-file$|cluster-config-file cluster_node_$PORT.conf|g" $OUTPUT_FILE
+    fi
+
+    ## cluster-node-timeout 15000
+    sed -i "s|^# cluster-node-timeout$|cluster-node-timeout 15000|g" $OUTPUT_FILE
+
+    ## cluster-migration-barrier 1
+    sed -i "s|^# cluster-migration-barrier$|cluster-migration-barrier 1|g" $OUTPUT_FILE
+
+    ## cluster-slave-validity-factor/cluster-replica-validity-factor 10
+    sed -i "s|^# cluster-replica-validity-factor$|cluster-replica-validity-factor 10|g" $OUTPUT_FILE
+    sed -i "s|^# cluster-slave-validity-factor$|cluster-slave-validity-factor 10|g" $OUTPUT_FILE
+
+    ## cluster-require-full-coverage yes
+    sed -i "s|^# cluster-require-full-coverage$|cluster-require-full-coverage yes|g" $OUTPUT_FILE
+
+    ## cluster-allow-reads-when-down yes
+    sed -i "s|^# cluster-allow-reads-when-down$|cluster-allow-reads-when-down yes|g" $OUTPUT_FILE
 fi
 
