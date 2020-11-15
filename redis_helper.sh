@@ -536,14 +536,54 @@ then
                     error_quit "Phase 'dir' from $CNF_FILE failed"
                 fi
 
-                ## maxmemory
+                ## pidfile
+                if [ `cat $CNF_FILE  | grep -cw ^pidfile` -eq 1 ]
+                then
+                    PIDFILE=`cat $CNF_FILE | grep -w ^pidfile | awk '{print $2}'`
+                else
+                    error_quit "Phase 'pidfile' from $CNF_FILE failed"
+                fi
+
+                ## logfile
+                if [ `cat $CNF_FILE  | grep -cw ^logfile` -eq 1 ]
+                then
+                    LOGFILE=`cat $CNF_FILE | grep -w ^logfile | awk '{print $2}'`
+                else
+                    error_quit "Phase 'logfile' from $CNF_FILE failed"
+                fi
+
                 if [ $SENTINEL_FLAG -eq 0 ]
                 then
+                    ## maxmemory
                     if [ `cat $CNF_FILE | grep -cw ^maxmemory` -eq 1 ]
                     then
                         MEM_USED=`cat $CNF_FILE | grep -w ^maxmemory | awk '{print $2}'`
                     else
                         error_quit "'maxmemory' is recommended for avoiding OOM"
+                    fi
+
+                    ## dbfilename
+                    if [ `cat $CNF_FILE  | grep -cw ^dbfilename` -eq 1 ]
+                    then
+                        RDBFILE=`cat $CNF_FILE | grep -w ^dbfilename | awk '{print $2}'`
+                    else
+                        error_quit "Phase 'dbfilename' from $CNF_FILE failed"
+                    fi
+
+                    ## appendfilename
+                    if [ `cat $CNF_FILE  | grep -cw ^appendfilename` -eq 1 ]
+                    then
+                        AOFFILE=`cat $CNF_FILE | grep -w ^appendfilename | awk '{print $2}'`
+                    else
+                        error_quit "Phase 'appendfilename' from $CNF_FILE failed"
+                    fi
+
+                    ## cluster-config-file
+                    if [ `cat $CNF_FILE  | grep -cw ^cluster-config-file` -eq 1 ]
+                    then
+                        CLUSTERFILE=`cat $CNF_FILE | grep -w ^cluster-config-file | awk '{print $2}'`
+                    else
+                        error_quit "Phase 'cluster-config-file' from $CNF_FILE failed"
                     fi
                 fi
             else
@@ -678,12 +718,12 @@ then
     sed -i "s|^daemonize .*|daemonize yes|g" $OUTPUT_FILE
 
     ## pidfile
-    TMP_STR=$DIR'redis_'$PORT'.pid'
-    sed -i "s|^pidfile .*|pidfile $TMP_STR|g" $OUTPUT_FILE
+    PIDFILE=$DIR'redis_'$PORT'.pid'
+    sed -i "s|^pidfile .*|pidfile $PIDFILE|g" $OUTPUT_FILE
 
     ## logfile
-    TMP_STR=$DIR'redis_'$PORT'.log'
-    sed -i "s|^logfile .*|logfile $TMP_STR|g" $OUTPUT_FILE
+    LOGFILE=$DIR'redis_'$PORT'.log'
+    sed -i "s|^logfile .*|logfile $LOGFILE|g" $OUTPUT_FILE
 
     ## save
     if [ $SET_RDB_FLAG -eq 0 ]
@@ -705,7 +745,8 @@ then
     fi
 
     ## dbfilename
-    sed -i "s|^dbfilename .*|dbfilename dump_$PORT.rdb|g" $OUTPUT_FILE
+    RDBFILE="dump_$PORT.rdb"
+    sed -i "s|^dbfilename .*|dbfilename $RDBFILE|g" $OUTPUT_FILE
 
     ## replicaof/slaveof
     if [ $SET_REPL_FLAG -eq 1 ]
@@ -745,7 +786,8 @@ then
     fi
 
     ## appendfilename
-    sed -i "s|^appendfilename .*|appendfilename appendonly_$PORT.aof|g" $OUTPUT_FILE
+    AOFFILE="appendonly_$PORT.aof"
+    sed -i "s|^appendfilename .*|appendfilename $AOFFILE|g" $OUTPUT_FILE
 
     ## no-appendfsync-on-rewrite yes
     sed -i "s|^no-appendfsync-on-rewrite .*|no-appendfsync-on-rewrite yes|g" $OUTPUT_FILE
@@ -754,8 +796,11 @@ then
     if [ $SET_CLUSTER_FLAG -eq 1 ]
     then
         sed -i "s|^# cluster-enabled$|cluster-enabled yes|g" $OUTPUT_FILE
-        sed -i "s|^# cluster-config-file$|cluster-config-file cluster_node_$PORT.conf|g" $OUTPUT_FILE
     fi
+
+    ## cluster-config-file
+    CLUSTERFILE="cluster_node_$PORT.conf"
+    sed -i "s|^# cluster-config-file$|cluster-config-file $CLUSTERFILE|g" $OUTPUT_FILE
 
     ## cluster-node-timeout 15000
     sed -i "s|^# cluster-node-timeout$|cluster-node-timeout 15000|g" $OUTPUT_FILE
