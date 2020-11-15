@@ -23,6 +23,9 @@ SET_RDB_FLAG=0
 SET_AOF_FLAG=0
 SET_REPL_FLAG=0
 SET_CLUSTER_FLAG=0
+SET_SENTINEL_MONITOR_FLAG=0
+SET_PASSWORD_FLAG=0
+SET_MASTER_PASSWORD_FLAG=0
 
 
 ## Function: -h option, print help information
@@ -32,17 +35,20 @@ echo "==========================================================================
 Usage:
 -A：         enable AOF persistence(default: disable)
 -c:          enable Redis Cluster mode(default: disable)
--d: <string> redis dir(default: ./)
--f: <string> specify a configuration file for installation(this file should have redis_helper fingerprint)
+-d: <string> redis dir(default: ./ or /tmp if it's sentinel)
+-f: <string> specify configuration file for installation(this file should have redis_helper fingerprint)
 -h:          print help information and quit
 -m: <number> specify maxmemory with 'mb' unit(default: total memory capacity minus 200mb)
+-M: <string> set sentinel monitor, format: MASTER_NAME:IP:PORT:QUORUM. eg: -M mymaster:127.0.0.1:6379:2
 -o: <string> destination of configuration file(default: \$PWD/redis.conf or \$PWD/sentinel.conf)
--p: <number> port(default: 6379)
+-p: <number> port(default: 6379 or 26379 if it's sentinel)
+-P: <string> set password(requirepass) for this instance(default: no password)
 -r: <string> set replicaof(slaveof), format: IP:PORT. eg: -r 192.168.0.2:6379
 -R:          enable RDB persistence(default: disable)
 -s:          installation type: sentinel
 -S:          install redis binary program and start the instance
 -v: <string> Redis Server version. eg: 3.0.6, 3.2.13, 4.0.1, 5.0.2, 6.0.9
+-x: <string> if master has password, set masterauth on replica, or sentinel auth-pass on sentinel
 =====================================================================================================
 Github: https://github.com/ddhe9527/my_toolkit
 Email : heduoduo321@163.com
@@ -423,7 +429,7 @@ function default_sentinel_config()
 
 
 ## Phase options
-while getopts "Acd:f:hm:o:p:r:RsSv:" opt
+while getopts "Acd:f:hm:M:o:p:P:r:RsSv:x:" opt
 do
     case $opt in
         A)
@@ -442,12 +448,18 @@ do
         m)
             SET_MEM_FLAG=1
             MEM_USED=$OPTARG;;
+        M)
+            SET_SENTINEL_MONITOR_FLAG=1
+            SENTINEL_MONITOR=$OPTARG;;
         o)
             SET_OUTPUT_FLAG=1
             OUTPUT_FILE=$OPTARG;;
         p)
             SET_PORT_FLAG=1
             PORT=$OPTARG;;
+        P)
+            SET_PASSWORD_FLAG=1
+            PASSWORD=$OPTARG;;
         r)
             SET_REPL_FLAG=1
             REPLOF=$OPTARG;;
@@ -460,6 +472,9 @@ do
         v)
             SET_VERSION_FLAG=1
             SERVER_VERSION=$OPTARG;;
+        x)
+            SET_MASTER_PASSWORD_FLAG=1
+            MASTER_PASSWORD=$OPTARG;;
         *)
             error_quit "Unknown option, try -h for more information";;
     esac
@@ -580,6 +595,25 @@ then
     MASTER_PORT=`echo $REPLOF | cut -d ':' -f 2`
 fi
 
+## if it's sentinel, -M option is mandatory
+if [ $SENTINEL_FLAG -eq 1 ]
+then
+    if [ $SET_SENTINEL_MONITOR_FLAG -eq 1 ]
+    then
+        if [ `echo $SENTINEL_MONITOR | grep -cE '^[a-z|A-Z][a-z|A-Z|0-9]*:((2[0-4][0-9]|25[0-5]|[01]?[0-9][0-9]?)\.){3}(2[0-4][0-9]|25[0-5]|[01]?[0-9][0-9]?):[1-9][0-9]*:[1-9][0-9]*$'` -eq 1 ]
+        then
+            SM_NAME=`echo $SENTINEL_MONITOR | cut -d ':' -f 1`
+            SM_IP=`echo $SENTINEL_MONITOR | cut -d ':' -f 2`
+            SM_PORT=`echo $SENTINEL_MONITOR | cut -d ':' -f 3`
+            SM_QUORUM=`echo $SENTINEL_MONITOR | cut -d ':' -f 4`
+        else
+            error_quit "Can not phase -M option to MASTER_NAME:IP:PORT:QUORUM format"
+        fi
+    else
+        error_quit "-M option is mandatory if -s option is used, please specify"
+    fi
+fi
+
 ## Genarate a configuration file
 if [ $SKIP_GENERATE_CNF -eq 0 ]
 then
@@ -606,7 +640,8 @@ then
         error_quit "Create default configuration file failed->$RET"
     fi
 
-    ## Twist the configuration file  
+    ## Twist the configuration file
+
     ## dir
     if [ $SET_DIR_FLAG -eq 1 ]
     then
@@ -615,14 +650,14 @@ then
         then
             DIR=$DIR'/'
         fi
-        sed -i "s|^dir.*|dir $DIR|g" $OUTPUT_FILE
+        sed -i "s|^dir .*|dir $DIR|g" $OUTPUT_FILE
     fi
     DIR=`cat $OUTPUT_FILE | grep -w ^dir | awk '{print $2}'`
 
     ## port
     if [ $SET_PORT_FLAG -eq 1 ]
     then
-        sed -i "s|^port.*|port $PORT|g" $OUTPUT_FILE
+        sed -i "s|^port .*|port $PORT|g" $OUTPUT_FILE
     fi
     PORT=`cat $OUTPUT_FILE | grep -w ^port | awk '{print $2}'`
 
@@ -633,31 +668,44 @@ then
     sed -i "s|^# maxmemory-policy$|maxmemory-policy volatile-ttl|g" $OUTPUT_FILE
 
     ## bind 0.0.0.0
-    sed -i "s|^bind.*|bind 0.0.0.0|g" $OUTPUT_FILE
+    sed -i "s|^bind .*|bind 0.0.0.0|g" $OUTPUT_FILE
     sed -i "s|^# bind$|bind 0.0.0.0|g" $OUTPUT_FILE
 
     ## tcp-keepalive 60
-    sed -i "s|^tcp-keepalive.*|tcp-keepalive 60|g" $OUTPUT_FILE
+    sed -i "s|^tcp-keepalive .*|tcp-keepalive 60|g" $OUTPUT_FILE
 
     ## daemonize yes
-    sed -i "s|^daemonize.*|daemonize yes|g" $OUTPUT_FILE
+    sed -i "s|^daemonize .*|daemonize yes|g" $OUTPUT_FILE
 
     ## pidfile
     TMP_STR=$DIR'redis_'$PORT'.pid'
-    sed -i "s|^pidfile.*|pidfile $TMP_STR|g" $OUTPUT_FILE
+    sed -i "s|^pidfile .*|pidfile $TMP_STR|g" $OUTPUT_FILE
 
     ## logfile
     TMP_STR=$DIR'redis_'$PORT'.log'
-    sed -i "s|^logfile.*|logfile $TMP_STR|g" $OUTPUT_FILE
+    sed -i "s|^logfile .*|logfile $TMP_STR|g" $OUTPUT_FILE
 
     ## save
     if [ $SET_RDB_FLAG -eq 0 ]
     then
-        sed -i "s|^save.*|# &|g" $OUTPUT_FILE
+        sed -i "s|^save .*|# &|g" $OUTPUT_FILE
+    fi
+
+    ## requirepass
+    if [ $SET_PASSWORD_FLAG -eq 1 ]
+    then
+        sed -i "s|# requirepass$|requirepass $PASSWORD|g" $OUTPUT_FILE
+    fi
+
+    ## masterauth OR sentinel auth-pass
+    if [ $SET_MASTER_PASSWORD_FLAG -eq 1 ]
+    then
+        sed -i "s|^# masterauth$|masterauth $MASTER_PASSWORD|g" $OUTPUT_FILE
+        sed -i "s|^# sentinel auth-pass$|sentinel auth-pass $SM_NAME $MASTER_PASSWORD|g" $OUTPUT_FILE
     fi
 
     ## dbfilename
-    sed -i "s|^dbfilename.*|dbfilename dump_$PORT.rdb|g" $OUTPUT_FILE
+    sed -i "s|^dbfilename .*|dbfilename dump_$PORT.rdb|g" $OUTPUT_FILE
 
     ## replicaof/slaveof
     if [ $SET_REPL_FLAG -eq 1 ]
@@ -683,24 +731,24 @@ then
     sed -i "s|^# maxclients$|maxclients 10000|g" $OUTPUT_FILE
 
     ## enable lazyfree
-    sed -i "s|^lazyfree-lazy-eviction.*|lazyfree-lazy-eviction yes|g" $OUTPUT_FILE
-    sed -i "s|^lazyfree-lazy-expire.*|lazyfree-lazy-expire yes|g" $OUTPUT_FILE
-    sed -i "s|^lazyfree-lazy-server-del.*|lazyfree-lazy-server-del yes|g" $OUTPUT_FILE
-    sed -i "s|^slave-lazy-flush.*|slave-lazy-flush yes|g" $OUTPUT_FILE
-    sed -i "s|^replica-lazy-flush.*|replica-lazy-flush yes|g" $OUTPUT_FILE
-    sed -i "s|^lazyfree-lazy-user-del.*|lazyfree-lazy-user-del yes|g" $OUTPUT_FILE
+    sed -i "s|^lazyfree-lazy-eviction .*|lazyfree-lazy-eviction yes|g" $OUTPUT_FILE
+    sed -i "s|^lazyfree-lazy-expire .*|lazyfree-lazy-expire yes|g" $OUTPUT_FILE
+    sed -i "s|^lazyfree-lazy-server-del .*|lazyfree-lazy-server-del yes|g" $OUTPUT_FILE
+    sed -i "s|^slave-lazy-flush .*|slave-lazy-flush yes|g" $OUTPUT_FILE
+    sed -i "s|^replica-lazy-flush .*|replica-lazy-flush yes|g" $OUTPUT_FILE
+    sed -i "s|^lazyfree-lazy-user-del .*|lazyfree-lazy-user-del yes|g" $OUTPUT_FILE
 
     ## AOF Persistence
     if [ $SET_AOF_FLAG -eq 1 ]
     then
-        sed -i "s|^appendonly.*|appendonly yes|g" $OUTPUT_FILE
+        sed -i "s|^appendonly .*|appendonly yes|g" $OUTPUT_FILE
     fi
 
     ## appendfilename
-    sed -i "s|^appendfilename.*|appendfilename appendonly_$PORT.aof|g" $OUTPUT_FILE
+    sed -i "s|^appendfilename .*|appendfilename appendonly_$PORT.aof|g" $OUTPUT_FILE
 
     ## no-appendfsync-on-rewrite yes
-    sed -i "s|^no-appendfsync-on-rewrite.*|no-appendfsync-on-rewrite yes|g" $OUTPUT_FILE
+    sed -i "s|^no-appendfsync-on-rewrite .*|no-appendfsync-on-rewrite yes|g" $OUTPUT_FILE
 
     ## cluster mode
     if [ $SET_CLUSTER_FLAG -eq 1 ]
@@ -724,5 +772,24 @@ then
 
     ## cluster-allow-reads-when-down yes
     sed -i "s|^# cluster-allow-reads-when-down$|cluster-allow-reads-when-down yes|g" $OUTPUT_FILE
+
+    ## client-output-buffer-limit slave/replica 512mb 128mb 60
+    sed -i "s|^client-output-buffer-limit slave .*|client-output-buffer-limit slave 512mb 128mb 60|g" $OUTPUT_FILE
+    sed -i "s|^client-output-buffer-limit replica .*|client-output-buffer-limit replica 512mb 128mb 60|g" $OUTPUT_FILE
+
+    ## enable activedefrag
+    sed -i "s|# activedefrag$|activedefrag yes|g" $OUTPUT_FILE
+
+    ## sentinel monitor MASTER_NAME:IP:PORT:QUORUM
+    sed -i "s|^sentinel monitor .*|sentinel monitor $SM_NAME $SM_IP $SM_PORT $SM_QUORUM|g" $OUTPUT_FILE
+
+    ## sentinel down-after-milliseconds MASTER_NAME 60000
+    sed -i "s|^sentinel down-after-milliseconds .*|sentinel down-after-milliseconds $SM_NAME 60000|g" $OUTPUT_FILE
+
+    ## sentinel parallel-syncs MASTER_NAME 1
+    sed -i "s|^sentinel parallel-syncs .*|sentinel parallel-syncs $SM_NAME 1|g" $OUTPUT_FILE
+
+    ## sentinel failover-timeout MASTER_NAME 180000
+    sed -i "s|^sentinel failover-timeout .*|sentinel failover-timeout $SM_NAME 180000|g" $OUTPUT_FILE
 fi
 
