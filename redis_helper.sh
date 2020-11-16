@@ -350,7 +350,7 @@ function default_redis_config()
     done
     echo "##########################################redis_helper_fingerprint_normal_$VERSION_STR" >> $TARGET_FILE
 
-    /usr/bin/rm -rf $TEMP_FILE
+    rm -rf $TEMP_FILE
     return 0
 }
 
@@ -845,9 +845,46 @@ then
 fi
 
 
-## Check OS version
+## Make sure the installation is operated by root only
+if [ `whoami` != 'root' ]
+then
+    error_quit "Only support root installation"
+fi
 
 
+## Check OS version, installation only for CentOS and Red Hat
+if [ `ls -l /etc | grep -c redhat-release` -gt 0 ]
+then
+    OS_INFO=`cat /etc/redhat-release`
+    OS_VER_NUM=${OS_INFO%%.*}
+    OS_INFO=${OS_INFO%% *}
+    OS_VER_NUM=`echo $OS_VER_NUM | tr -cd "[0-9]"`
+else
+    error_quit "Can not find /etc/redhat-release"
+fi
+
+case $OS_INFO in
+    Red)
+        OS_INFO='RHEL';;
+    CentOS)
+        OS_INFO='CentOS';;
+    *)
+        error_quit "Unknown OS";;
+esac
+echo "OS type: "$OS_INFO $OS_VER_NUM
+
+
+## Check redis-server if already installed
+type redis-server 2>/dev/null
+if [ $? -eq 0 ]
+then
+    read -p "It looks like Redis has already been installed. Enter 'YES' if you want to override it: " CONTINUE_FLAG
+    if [[ `echo $CONTINUE_FLAG | tr [a-z] [A-Z]` != 'YES' ]]
+    then
+        echo `tput bold`"Installation canceled!"`tput sgr0`
+        exit 0
+    fi
+fi
 
 
 ## Check dir, port, maxmemory, pidfile, logfile, dbfilename, appendfilename, cluster-config-file before installation
@@ -858,10 +895,15 @@ then
 fi
 
 ## port must not be occupied
-yum install -y net-tools &>/dev/null
+type netstat &>/dev/null
 if [ $? -ne 0 ]
 then
-    error_quit "Install net-tools from yum repository failed, please check your yum configuration first"
+    echo "Installing net-tools"
+    yum install -y net-tools &>/dev/null
+    if [ $? -ne 0 ]
+    then
+        error_quit "Install net-tools from yum repository failed, please check your yum configuration first"
+    fi
 fi
 
 if [ `netstat -tunlp | awk '{print $4}' | grep -E "*:$PORT$" | wc -l` -gt 0 ]
@@ -884,4 +926,39 @@ CLUSTERFILE=$DIR$CLUSTERFILE
 if [[ -f $PIDFILE || -f $LOGFILE || -f $RDBFILE || -f $AOFFILE || -f $CLUSTERFILE ]]
 then
     error_quit "pidfile, logfile, dbfilename, appendfilename, cluster-config-file must not exist"
+fi
+
+
+## Install necessary packages
+echo "Installing necessary packages..."
+type gcc &>/dev/null
+if [ -$? -ne 0 ]
+then
+    yum install -y make gcc unzip bzip2 ruby rubygems &>/dev/null
+else
+    yum install -y make unzip bzip2 ruby rubygems &>/dev/null
+fi
+
+if [ $? -ne 0 ]
+then
+    error_quit "Install packeges from yum repository failed, please check your yum configuration first"
+fi
+echo "Finish installing necessary packages..."
+
+
+## Check gcc version
+if [[ 10#$INTERNAL_SERVER_VERSION -ge 10#006000000 ]]
+then
+    GCC_VERSION=`gcc --version | head -1 | awk '{print $3}'`
+    GCC_MAJOR_VER=`echo $GCC_VERSION | cut -d '.' -f 1`
+    GCC_MID_VER=`echo $GCC_VERSION | cut -d '.' -f 2`
+    if [ $GCC_MAJOR_VER -le 5 ]
+    then
+        if [[ $GCC_MAJOR_VER -eq 5 && $GCC_MID_VER -ge 3 ]]
+        then
+            :
+        else
+            error_quit "gcc 5.3.0 and above is needed for compiling Redis 6.0 and above"
+        fi
+    fi
 fi

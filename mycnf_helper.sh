@@ -1241,7 +1241,7 @@ fi
 if [ $AUTOSTART_FLAG -eq 1 ]
 then
     read -p "Enable autostarting will overwrite /etc/my.cnf and /etc/init.d/mysqld. Enter 'YES' if you want to do this: " CONTINUE_FLAG
-    if [ `echo $CONTINUE_FLAG | tr [a-z] [A-Z]` = 'YES' ]
+    if [[ `echo $CONTINUE_FLAG | tr [a-z] [A-Z]` = 'YES' ]]
     then
         if [ -f /etc/my.cnf ]
         then
