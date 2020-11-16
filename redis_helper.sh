@@ -395,7 +395,7 @@ function default_sentinel_config()
     echo '005000000@999999999@logfile ""' >> $TEMP_FILE
     echo '003000000@999999999@# sentinel announce-ip' >> $TEMP_FILE
     echo '003000000@999999999@# sentinel announce-port' >> $TEMP_FILE
-    echo '003000000@999999999@dir /tmp' >> $TEMP_FILE
+    echo '003000000@999999999@dir /tmp/' >> $TEMP_FILE
     echo '003000000@999999999@sentinel monitor mymaster 127.0.0.1 6379 2' >> $TEMP_FILE
     echo '003000000@999999999@# sentinel auth-pass' >> $TEMP_FILE
     echo '006000000@999999999@# sentinel auth-user' >> $TEMP_FILE
@@ -513,7 +513,7 @@ then
                     error_quit "There's mismatch version information bewteen -f and -v options"
                 fi
 
-                if [ `echo $CNF_FILE_HEADER | grep -c sentinel` -eq 0]
+                if [ `echo $CNF_FILE_HEADER | grep -c sentinel` -eq 0 ]
                 then
                     SENTINEL_FLAG=0
                 else
@@ -555,9 +555,9 @@ then
                 if [ $SENTINEL_FLAG -eq 0 ]
                 then
                     ## maxmemory
-                    if [ `cat $CNF_FILE | grep -cw ^maxmemory` -eq 1 ]
+                    if [ `cat $CNF_FILE | grep -c '^maxmemory '` -eq 1 ]
                     then
-                        MEM_USED=`cat $CNF_FILE | grep -w ^maxmemory | awk '{print $2}'`
+                        MEM_USED=`cat $CNF_FILE | grep '^maxmemory ' | awk '{print $2}'`
                     else
                         error_quit "'maxmemory' is recommended for avoiding OOM"
                     fi
@@ -636,7 +636,7 @@ then
 fi
 
 ## if it's sentinel, -M option is mandatory
-if [ $SENTINEL_FLAG -eq 1 ]
+if [[ $SENTINEL_FLAG -eq 1 && $SKIP_GENERATE_CNF -eq 0 ]]
 then
     if [ $SET_SENTINEL_MONITOR_FLAG -eq 1 ]
     then
@@ -838,3 +838,50 @@ then
     sed -i "s|^sentinel failover-timeout .*|sentinel failover-timeout $SM_NAME 180000|g" $OUTPUT_FILE
 fi
 
+if [ $SETUP_FLAG -eq 0 ]
+then
+    echo `tput bold`"Done!"`tput sgr0`
+    exit 0
+fi
+
+
+## Check OS version
+
+
+
+
+## Check dir, port, maxmemory, pidfile, logfile, dbfilename, appendfilename, cluster-config-file before installation
+## dir must exist
+if [ ! -d $DIR ]
+then
+    error_quit "$DIR does not exist"
+fi
+
+## port must not be occupied
+yum install -y net-tools &>/dev/null
+if [ $? -ne 0 ]
+then
+    error_quit "Install net-tools from yum repository failed, please check your yum configuration first"
+fi
+
+if [ `netstat -tunlp | awk '{print $4}' | grep -E "*:$PORT$" | wc -l` -gt 0 ]
+then
+    error_quit "Port $PORT has been occupied, please manually check"
+fi
+
+## maxmemory must less than total memory minus 200mb
+TMP_STR=${#MEM_USED}
+let TMP_STR=$TMP_STR-2
+MEM_USED=${MEM_USED:0:$TMP_STR}
+if [ $MEM_USED -gt $MEM_CAP ]
+then
+    error_quit "'maxmemory' is too large for current server"
+fi
+
+RDBFILE=$DIR$RDBFILE
+AOFFILE=$DIR$AOFFILE
+CLUSTERFILE=$DIR$CLUSTERFILE
+if [[ -f $PIDFILE || -f $LOGFILE || -f $RDBFILE || -f $AOFFILE || -f $CLUSTERFILE ]]
+then
+    error_quit "pidfile, logfile, dbfilename, appendfilename, cluster-config-file must not exist"
+fi
