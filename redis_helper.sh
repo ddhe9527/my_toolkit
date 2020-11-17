@@ -962,3 +962,43 @@ then
         fi
     fi
 fi
+
+
+## Uncompress redis package to current directory
+FILE1="redis-$SERVER_VERSION.tar.gz"
+FILE2="redis-$SERVER_VERSION.zip"
+if [ `ls -l | grep -c " $FILE1$"` -eq 1 ]
+then
+    tar -xvf $FILE1 &>/dev/null
+elif [ `ls -l | grep -c " $FILE2$"` -eq 1 ]
+then
+    unzip -o $FILE2 &>/dev/null
+else
+    error_quit "Can not find redis-$SERVER_VERSION archive package in current directory"
+fi
+
+if [ $? -ne 0 ]
+then
+    error_quit "Uncompressing redis-$SERVER_VERSION archive package failed"
+fi
+
+## Compile redis
+UNCOMPRESS_DIR="redis-$SERVER_VERSION"
+cd $UNCOMPRESS_DIR &>/dev/null
+if [ $? -ne 0 ]
+then
+    error_quit "Change directory to $UNCOMPRESS_DIR failed"
+fi
+
+echo "Executing 'make' and 'make install' command to compile"
+make &>/dev/null
+if [ $? -ne 0 ]
+then
+    error_quit "Execute 'make' failed"
+fi
+
+make install &>/dev/null
+if [ $? -ne 0 ]
+then
+    error_quit "Execute 'make install' failed"
+fi
