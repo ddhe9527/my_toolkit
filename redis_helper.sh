@@ -974,12 +974,12 @@ elif [ `ls -l | grep -c " $FILE2$"` -eq 1 ]
 then
     unzip -o $FILE2 &>/dev/null
 else
-    error_quit "Can not find redis-$SERVER_VERSION archive package in current directory"
+    error_quit "Can not find redis $SERVER_VERSION archive package in current directory"
 fi
 
 if [ $? -ne 0 ]
 then
-    error_quit "Uncompressing redis-$SERVER_VERSION archive package failed"
+    error_quit "Uncompress redis $SERVER_VERSION archive package failed"
 fi
 
 ## Compile redis
