@@ -523,7 +523,7 @@ then
                 ## port
                 if [ `cat $CNF_FILE  | grep -cw ^port` -eq 1 ]
                 then
-                    PORT=`cat $CNF_FILE | grep -w ^port | awk '{print $2}'`
+                    PORT=`cat $CNF_FILE | grep -w ^port | awk '{print $2}' | tr -d '"'`
                 else
                     error_quit "Phase 'port' from $CNF_FILE failed"
                 fi
@@ -531,7 +531,7 @@ then
                 ## dir
                 if [ `cat $CNF_FILE  | grep -cw ^dir` -eq 1 ]
                 then
-                    DIR=`cat $CNF_FILE | grep -w ^dir | awk '{print $2}'`
+                    DIR=`cat $CNF_FILE | grep -w ^dir | awk '{print $2}' | tr -d '"'`
                 else
                     error_quit "Phase 'dir' from $CNF_FILE failed"
                 fi
@@ -539,7 +539,7 @@ then
                 ## pidfile
                 if [ `cat $CNF_FILE  | grep -cw ^pidfile` -eq 1 ]
                 then
-                    PIDFILE=`cat $CNF_FILE | grep -w ^pidfile | awk '{print $2}'`
+                    PIDFILE=`cat $CNF_FILE | grep -w ^pidfile | awk '{print $2}' | tr -d '"'`
                 else
                     error_quit "Phase 'pidfile' from $CNF_FILE failed"
                 fi
@@ -547,7 +547,7 @@ then
                 ## logfile
                 if [ `cat $CNF_FILE  | grep -cw ^logfile` -eq 1 ]
                 then
-                    LOGFILE=`cat $CNF_FILE | grep -w ^logfile | awk '{print $2}'`
+                    LOGFILE=`cat $CNF_FILE | grep -w ^logfile | awk '{print $2}' | tr -d '"'`
                 else
                     error_quit "Phase 'logfile' from $CNF_FILE failed"
                 fi
@@ -557,7 +557,7 @@ then
                     ## maxmemory
                     if [ `cat $CNF_FILE | grep -c '^maxmemory '` -eq 1 ]
                     then
-                        MEM_USED=`cat $CNF_FILE | grep '^maxmemory ' | awk '{print $2}'`
+                        MEM_USED=`cat $CNF_FILE | grep '^maxmemory ' | awk '{print $2}' | tr -d '"'`
                     else
                         error_quit "'maxmemory' is recommended for avoiding OOM"
                     fi
@@ -565,7 +565,7 @@ then
                     ## dbfilename
                     if [ `cat $CNF_FILE  | grep -cw ^dbfilename` -eq 1 ]
                     then
-                        RDBFILE=`cat $CNF_FILE | grep -w ^dbfilename | awk '{print $2}'`
+                        RDBFILE=`cat $CNF_FILE | grep -w ^dbfilename | awk '{print $2}' | tr -d '"'`
                     else
                         error_quit "Phase 'dbfilename' from $CNF_FILE failed"
                     fi
@@ -573,7 +573,7 @@ then
                     ## appendfilename
                     if [ `cat $CNF_FILE  | grep -cw ^appendfilename` -eq 1 ]
                     then
-                        AOFFILE=`cat $CNF_FILE | grep -w ^appendfilename | awk '{print $2}'`
+                        AOFFILE=`cat $CNF_FILE | grep -w ^appendfilename | awk '{print $2}' | tr -d '"'`
                     else
                         error_quit "Phase 'appendfilename' from $CNF_FILE failed"
                     fi
@@ -581,7 +581,7 @@ then
                     ## cluster-config-file
                     if [ `cat $CNF_FILE  | grep -cw ^cluster-config-file` -eq 1 ]
                     then
-                        CLUSTERFILE=`cat $CNF_FILE | grep -w ^cluster-config-file | awk '{print $2}'`
+                        CLUSTERFILE=`cat $CNF_FILE | grep -w ^cluster-config-file | awk '{print $2}' | tr -d '"'`
                     else
                         error_quit "Phase 'cluster-config-file' from $CNF_FILE failed"
                     fi
