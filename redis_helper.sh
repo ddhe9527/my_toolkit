@@ -502,7 +502,7 @@ then
     then
         if [ -f $CNF_FILE ]
         then
-            if [[ `head -1 $CNF_FILE | grep -c redis_helper_fingerprint` -eq 1 && `tail -1 $CNF_FILE | grep -c redis_helper_fingerprint` -eq 1 ]]
+            if [ `cat $CNF_FILE | grep -c redis_helper_fingerprint` -eq 2 ]
             then
                 CNF_FILE_HEADER=`head -1 $CNF_FILE`
                 CNF_FILE_HEADER_LEN=${#CNF_FILE_HEADER}
@@ -886,6 +886,10 @@ then
     fi
 fi
 
+if [[ `ps -ef | grep -v grep | grep -c ' redis-server '` -gt 0 || `ps -ef | grep -v grep | grep -c ' redis-sentinel '` -gt 0 ]]
+then
+    error_quit "redis-server or redis-sentinel is running, overriding is unsafe"
+fi
 
 ## Check dir, port, maxmemory, pidfile, logfile, dbfilename, appendfilename, cluster-config-file before installation
 ## dir must exist
@@ -991,6 +995,12 @@ then
 fi
 
 echo "Executing 'make' and 'make install' command to compile"
+make distclean &>/dev/null
+if [ $? -ne 0 ]
+then
+    error_quit "Execute 'make distclean' failed"
+fi
+
 make &>/dev/null
 if [ $? -ne 0 ]
 then
