@@ -813,7 +813,7 @@ then
     sed -i "s|^# cluster-slave-validity-factor$|cluster-slave-validity-factor 10|g" $OUTPUT_FILE
 
     ## cluster-require-full-coverage yes
-    sed -i "s|^# cluster-require-full-coverage$|cluster-require-full-coverage yes|g" $OUTPUT_FILE
+    sed -i "s|^# cluster-require-full-coverage$|cluster-require-full-coverage no|g" $OUTPUT_FILE
 
     ## cluster-allow-reads-when-down yes
     sed -i "s|^# cluster-allow-reads-when-down$|cluster-allow-reads-when-down yes|g" $OUTPUT_FILE
