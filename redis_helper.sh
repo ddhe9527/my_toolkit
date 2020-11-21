@@ -4,6 +4,7 @@
 ## Default values
 REDIS_CONFIG_FILE=$PWD/redis.conf
 SENTINEL_CONFIG_FILE=$PWD/sentinel.conf
+CURRENT_DIR=$PWD
 LOWEST_VERSION='003000000'
 MEM_CAP=`cat /proc/meminfo | grep MemTotal | awk '{print $2}'`
 let MEM_CAP=$MEM_CAP/1024-200
@@ -26,6 +27,7 @@ SET_CLUSTER_FLAG=0
 SET_SENTINEL_MONITOR_FLAG=0
 SET_PASSWORD_FLAG=0
 SET_MASTER_PASSWORD_FLAG=0
+SET_NTP_FLAG=0
 
 
 ## Function: -h option, print help information
@@ -40,6 +42,7 @@ Usage:
 -h:          print help information and quit
 -m: <number> specify maxmemory with 'mb' unit(default: total memory capacity minus 200mb)
 -M: <string> set sentinel monitor, format: MASTER_NAME:IP:PORT:QUORUM. eg: -M mymaster:127.0.0.1:6379:2
+-n: <string> NTP server IP address
 -o: <string> destination of configuration file(default: \$PWD/redis.conf or \$PWD/sentinel.conf)
 -p: <number> port(default: 6379 or 26379 if it's sentinel)
 -P: <string> set password(requirepass) for this instance(default: no password)
@@ -429,7 +432,7 @@ function default_sentinel_config()
 
 
 ## Phase options
-while getopts "Acd:f:hm:M:o:p:P:r:RsSv:x:" opt
+while getopts "Acd:f:hm:M:n:o:p:P:r:RsSv:x:" opt
 do
     case $opt in
         A)
@@ -451,6 +454,9 @@ do
         M)
             SET_SENTINEL_MONITOR_FLAG=1
             SENTINEL_MONITOR=$OPTARG;;
+        n)
+            SET_NTP_FLAG=1
+            NTP_SERVER=$OPTARG;;
         o)
             SET_OUTPUT_FLAG=1
             OUTPUT_FILE=$OPTARG;;
@@ -836,6 +842,8 @@ then
 
     ## sentinel failover-timeout MASTER_NAME 180000
     sed -i "s|^sentinel failover-timeout .*|sentinel failover-timeout $SM_NAME 180000|g" $OUTPUT_FILE
+
+    CNF_FILE=$OUTPUT_FILE
 fi
 
 if [ $SETUP_FLAG -eq 0 ]
@@ -1012,3 +1020,188 @@ if [ $? -ne 0 ]
 then
     error_quit "Execute 'make install' failed"
 fi
+
+
+## Turn off SeLinux
+if [ `getenforce` != 'Disabled' ]
+then
+    sed -i "/^SELINUX/d" /etc/selinux/config
+    echo "SELINUX=disabled" >> /etc/selinux/config
+    echo "SELINUXTYPE=targeted" >> /etc/selinux/config
+    echo 'Modifying /etc/selinux/config'
+    setenforce 0
+    echo `tput bold`"SELinux is disabled, rebooting OS is recommanded"`tput sgr0`
+fi
+
+
+## Trun off Transparent Hugepage
+if [ $OS_VER_NUM -gt 5 ]
+then
+    if [[ `cat /sys/kernel/mm/transparent_hugepage/defrag` != 'always madvise [never]' || `cat /sys/kernel/mm/transparent_hugepage/enabled` != 'always madvise [never]' ]]
+    then
+        if [ `cat /etc/rc.d/rc.local | grep -c redis_helper_fingerprint` -eq 0 ]
+        then
+            echo 'Modifying /etc/rc.d/rc.local'
+            echo '##The following contents are added by redis_helper(redis_helper_fingerprint)
+if test -f /sys/kernel/mm/transparent_hugepage/enabled
+then
+    echo never > /sys/kernel/mm/transparent_hugepage/enabled
+fi
+if test -f /sys/kernel/mm/transparent_hugepage/defrag
+then
+    echo never > /sys/kernel/mm/transparent_hugepage/defrag
+fi' >> /etc/rc.d/rc.local
+        fi
+        chmod +x /etc/rc.d/rc.local
+        echo never > /sys/kernel/mm/transparent_hugepage/defrag
+        echo never > /sys/kernel/mm/transparent_hugepage/enabled
+        echo `tput bold`"Transparent Hugepage is disabled, rebooting OS is recommanded"`tput sgr0`
+    fi
+fi
+
+
+## Turn off firewall
+echo 'Disabling firewall'
+if [ $OS_VER_NUM -lt 7 ]    ##for RHEL/CentOS 5,6
+then
+    chkconfig --level 2345 iptables off
+    chkconfig --level 2345 ip6tables off
+    service iptables stop
+    service ip6tables stop
+elif [[ $OS_VER_NUM -ge 7 && $OS_VER_NUM -lt 9 ]]    ##for RHEL/CentOS 7,8
+then
+    systemctl stop firewalld.service
+    systemctl disable firewalld.service
+else
+    error_quit "Only support OS major version 5 ~ 8"
+fi
+
+
+## Twist Linux kernel parameter
+if [ `cat /etc/sysctl.conf | grep -c redis_helper_fingerprint` -eq 0 ]
+then
+    echo '##The following contents are added by redis_helper(redis_helper_fingerprint)
+net.core.somaxconn = 65535
+net.ipv4.tcp_max_syn_backlog = 65535
+fs.file-max = 2000000
+vm.overcommit_memory = 1' >> /etc/sysctl.conf
+
+    ##vm.swappiness=1 or 0 depends on Linux kernel version, the goal is avoiding OOM killer
+    KERNEL_VERSION_MAJOR=`uname -r | awk -F'.' '{print $1}'`
+    KERNEL_VERSION=`uname -r | awk -F'.' '{print $1$2}'`
+    if [[ $KERNEL_VERSION_MAJOR -lt 3 || $KERNEL_VERSION -lt 35 ]]
+    then
+        ##Linux 3.4 and below
+        echo 'vm.swappiness = 0' >> /etc/sysctl.conf
+    else
+        ##Linux 3.5 and above
+        echo 'vm.swappiness = 1' >> /etc/sysctl.conf
+    fi
+    echo "##End(redis_helper_fingerprint)" >> /etc/sysctl.conf
+
+    #Bring the change into effect
+    echo "Finish writing sysctl.conf"
+    sysctl -p &>/dev/null
+    if [ $? -eq 0 ]
+    then
+        echo "Finish executing sysctl -p"
+    else
+        error_quit "Executing 'sysctl -p' failed"
+    fi
+fi
+
+
+## Configure OS limits
+if [ `cat /etc/security/limits.conf | grep -v ^# | grep -v ^$ | grep -c nofile` -gt 0 ]
+then
+    if [ `cat /etc/security/limits.conf | grep -c redis_helper_fingerprint` -eq 0 ]
+    then
+        sed -i "s/.*nofile/#&/g" /etc/security/limits.conf
+        echo "Modifying /etc/security/limits.conf"
+    fi
+fi
+
+if [ `cat /etc/security/limits.conf | grep -c redis_helper_fingerprint` -eq 0 ]
+then
+    echo '##The following contents are added by redis_helper(redis_helper_fingerprint)
+* soft nofile 65535
+* hard nofile 65535
+##End(redis_helper_fingerprint)' >> /etc/security/limits.conf
+    echo "Writing /etc/security/limits.conf"
+fi
+
+ulimit -n 65535
+
+if [ `cat /etc/pam.d/login | grep -c pam_limits.so` -eq 0 ]
+then
+    echo "session    required    pam_limits.so" >> /etc/pam.d/login
+    echo "Writing /etc/pam.d/login"
+fi
+
+
+## Configure NTP service
+if [ $SET_NTP_FLAG -eq 1 ]
+then
+    ## Check IP address format
+    if [ `echo $NTP_SERVER | grep -cE '^((2[0-4][0-9]|25[0-5]|[01]?[0-9][0-9]?)\.){3}(2[0-4][0-9]|25[0-5]|[01]?[0-9][0-9]?)$'` -eq 0 ]
+    then
+        error_quit "Invalid IP address for NTP server, use -n to specify the right IP"
+    fi
+
+    if [ $OS_VER_NUM -lt 8 ] ## For CentOS/RHEL 5/6/7, use ntpdate
+    then
+        yum install -y ntp &>/dev/null
+        if [ $? -ne 0 ]
+        then
+            error_quit "Install ntp from yum repository failed"
+        fi
+
+        ## Create /var/spool/cron/root if not exists
+        if [ ! -f /var/spool/cron/root ]
+        then
+            touch /var/spool/cron/root
+            chmod 600 /var/spool/cron/root
+            echo "Creating /var/spool/cron/root"
+        fi
+
+        if [ `cat /var/spool/cron/root | grep -c ntpdate` -eq 0 ]
+        then
+            echo "0 1 * * * /usr/sbin/ntpdate $NTP_SERVER" >> /var/spool/cron/root
+            echo "Adding ntpdate $NTP_SERVER to root's crontab"
+        else
+            echo "ntpdate has already configured"
+            crontab -l
+        fi
+    else ## For CentOS/RHEL 8, use chronyd
+        if [ `cat /etc/chrony.conf | grep -v ^# | grep -v ^$ | grep ^pool | grep $NTP_SERVER | wc -l` -eq 0 ]
+        then
+            echo "Writing /etc/chrony.conf"
+            sed -i "/^pool/d" /etc/chrony.conf
+            echo "pool $NTP_SERVER" >> /etc/chrony.conf
+
+            echo "Restarting chronyd"
+            systemctl stop chronyd
+            systemctl start chronyd
+            systemctl enable chronyd
+        fi
+    fi
+fi
+
+
+## Start redis instance
+cd $CURRENT_DIR
+if [ $SENTINEL_FLAG -eq 0 ]
+then
+    echo "Starting redis instance"
+    redis-server $CNF_FILE
+else
+    echo "Starting redis sentinel"
+    redis-sentinel $CNF_FILE
+fi
+
+if [ $? -ne 0 ]
+then
+    error_quit "Start redis instance failed"
+fi
+
+ps -ef | grep -v grep | grep redis | grep $PORT
