@@ -953,9 +953,14 @@ then
         error_quit "OS user $USERNAME does not exist"
     fi
 
-    if [ $DIR = './' ]
+    ## transport relative path to absolute path
+    if [ ${DIR:0:1} = '.' ]
     then
-        TEST_FILE=$PWD"/test_"$RANDOM".log"
+        DIR_LEN=${#DIR}
+        TEST_FILE=$PWD${DIR:1:$DIR_LEN-1}"/test_"$RANDOM".log"
+    elif [[ ${DIR:0:1} != '/' && ${DIR:0:1} != '.' ]]
+    then
+        TEST_FILE=$PWD'/'$DIR"test_"$RANDOM".log"
     else
         TEST_FILE=$DIR"test_"$RANDOM".log"
     fi
