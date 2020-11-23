@@ -28,6 +28,7 @@ SET_SENTINEL_MONITOR_FLAG=0
 SET_PASSWORD_FLAG=0
 SET_MASTER_PASSWORD_FLAG=0
 SET_NTP_FLAG=0
+SET_USER_FLAG=0
 
 
 ## Function: -h option, print help information
@@ -50,6 +51,7 @@ Usage:
 -R:          enable RDB persistence(default: disable)
 -s:          installation type: sentinel
 -S:          install redis binary program and start the instance
+-u: <string> run redis instance with particular OS user, the user must exist(default: root)
 -v: <string> Redis Server version. eg: 3.0.6, 3.2.13, 4.0.1, 5.0.2, 6.0.9
 -x: <string> if master has password, set masterauth on replica, or sentinel auth-pass on sentinel
 =====================================================================================================
@@ -432,7 +434,7 @@ function default_sentinel_config()
 
 
 ## Phase options
-while getopts "Acd:f:hm:M:n:o:p:P:r:RsSv:x:" opt
+while getopts "Acd:f:hm:M:n:o:p:P:r:RsSu:v:x:" opt
 do
     case $opt in
         A)
@@ -475,6 +477,9 @@ do
             SENTINEL_FLAG=1;;
         S)
             SETUP_FLAG=1;;
+        u)
+            SET_USER_FLAG=1
+            USERNAME=$OPTARG;;
         v)
             SET_VERSION_FLAG=1
             SERVER_VERSION=$OPTARG;;
@@ -940,6 +945,42 @@ then
     error_quit "pidfile, logfile, dbfilename, appendfilename, cluster-config-file must not exist"
 fi
 
+## if use -u option, OS user must exist and has privilege on DIR
+if [ $SET_USER_FLAG -eq 1 ]
+then
+    if [ `cat /etc/passwd | cut -d ':' -f 1 | grep -cw $USERNAME` -ne 1 ]
+    then
+        error_quit "OS user $USERNAME does not exist"
+    fi
+
+    if [ $DIR = './' ]
+    then
+        TEST_FILE=$PWD"/test_"$RANDOM".log"
+    else
+        TEST_FILE=$DIR"test_"$RANDOM".log"
+    fi
+
+    su - $USERNAME -c "touch $TEST_FILE" &>/dev/null
+    if [ $? -ne 0 ]
+    then
+        error_quit "OS user '$USERNAME' dose not has enough privileges on directory '$DIR'"
+    else
+        rm -rf $TEST_FILE
+    fi
+
+    chown $USERNAME:$USERNAME $CNF_FILE
+    if [ $? -ne 0 ]
+    then
+        error_quit "Change $CNF_FILE's ownership failed(chown)"
+    fi
+
+    su - $USERNAME -c "cat $CNF_FILE" &>/dev/null
+    if [ $? -ne 0 ]
+    then
+        error_quit "OS user '$USERNAME' does not has enough privileges to access '$CNF_FILE'"
+    fi
+fi
+
 
 ## Install necessary packages
 echo "Installing necessary packages..."
@@ -1193,10 +1234,17 @@ cd $CURRENT_DIR
 if [ $SENTINEL_FLAG -eq 0 ]
 then
     echo "Starting redis instance"
-    redis-server $CNF_FILE
+    START_CMD="redis-server $CNF_FILE"
 else
     echo "Starting redis sentinel"
-    redis-sentinel $CNF_FILE
+    START_CMD="redis-sentinel $CNF_FILE"
+fi
+
+if [ $SET_USER_FLAG -eq 1 ]
+then
+    su - $USERNAME -c "$START_CMD"
+else
+    eval $START_CMD
 fi
 
 if [ $? -ne 0 ]
