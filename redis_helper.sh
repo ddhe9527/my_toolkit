@@ -8,7 +8,12 @@ CURRENT_DIR=$PWD
 LOWEST_VERSION='003000000'
 MEM_CAP=`cat /proc/meminfo | grep MemTotal | awk '{print $2}'`
 let MEM_CAP=$MEM_CAP/1024-200
-MEM_USED=$MEM_CAP"mb"
+if [ $MEM_CAP -gt 1024 ]
+then
+    MEM_USED='1024mb'
+else
+    MEM_USED=$MEM_CAP"mb"
+fi
 
 
 ## Flags(internal use)
@@ -43,7 +48,7 @@ Usage:
 -d: <string> redis dir(default: ./ or /tmp if it's sentinel)
 -f: <string> specify configuration file for installation(this file should have redis_helper fingerprint)
 -h:          print help information and quit
--m: <number> specify maxmemory with 'mb' unit(default: total memory capacity minus 200mb)
+-m: <number> specify maxmemory with 'mb' unit(default: total memory capacity minus 200mb, or 1024mb)
 -M: <string> set sentinel monitor, format: MASTER_NAME:IP:PORT:QUORUM. eg: -M mymaster:127.0.0.1:6379:2
 -n: <string> NTP server IP address
 -o: <string> destination of configuration file(default: \$PWD/redis.conf or \$PWD/sentinel.conf)
