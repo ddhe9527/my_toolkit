@@ -29,6 +29,7 @@ SET_PASSWORD_FLAG=0
 SET_MASTER_PASSWORD_FLAG=0
 SET_NTP_FLAG=0
 SET_USER_FLAG=0
+SET_MEET_FLAG=0
 
 
 ## Function: -h option, print help information
@@ -38,6 +39,7 @@ echo "==========================================================================
 Usage:
 -A：         enable AOF persistence(default: disable)
 -c:          enable Redis Cluster mode(default: disable)
+-C: <string> when cluster mode is enabled, meet an existing node, and be a replica of this node(optional)
 -d: <string> redis dir(default: ./ or /tmp if it's sentinel)
 -f: <string> specify configuration file for installation(this file should have redis_helper fingerprint)
 -h:          print help information and quit
@@ -434,13 +436,16 @@ function default_sentinel_config()
 
 
 ## Phase options
-while getopts "Acd:f:hm:M:n:o:p:P:r:RsSu:v:x:" opt
+while getopts "AcC:d:f:hm:M:n:o:p:P:r:RsSu:v:x:" opt
 do
     case $opt in
         A)
             SET_AOF_FLAG=1;;
         c)
             SET_CLUSTER_FLAG=1;;
+        C)
+            SET_MEET_FLAG=1
+            CLUSTER_MEET=$OPTARG;;
         d)
             SET_DIR_FLAG=1
             DIR=$OPTARG;;
@@ -760,7 +765,7 @@ then
     sed -i "s|^dbfilename .*|dbfilename $RDBFILE|g" $OUTPUT_FILE
 
     ## replicaof/slaveof
-    if [ $SET_REPL_FLAG -eq 1 ]
+    if [[ $SET_REPL_FLAG -eq 1 && $SET_CLUSTER_FLAG -eq 0 ]]
     then
         sed -i "s|^# replicaof$|replicaof $MASTER_IP $MASTER_PORT|g" $OUTPUT_FILE
         sed -i "s|^# slaveof$|slaveof $MASTER_IP $MASTER_PORT|g" $OUTPUT_FILE
@@ -928,6 +933,15 @@ then
     error_quit "Port $PORT has been occupied, please manually check"
 fi
 
+if [ $SET_CLUSTER_FLAG -eq 1 ]
+then
+    let CLUSTER_PORT=$PORT+10000
+    if [ `netstat -tunlp | awk '{print $4}' | grep -E "*:$CLUSTER_PORT$" | wc -l` -gt 0 ]
+    then
+        error_quit "Cluster announce port $CLUSTER_PORT has been occupied, please manually check"
+    fi
+fi
+
 ## maxmemory must less than total memory minus 200mb
 TMP_STR=${#MEM_USED}
 let TMP_STR=$TMP_STR-2
@@ -983,6 +997,30 @@ then
     if [ $? -ne 0 ]
     then
         error_quit "OS user '$USERNAME' does not has enough privileges to access '$CNF_FILE'"
+    fi
+fi
+
+## check -C option
+if [[ $SENTINEL_FLAG -eq 0 && $SET_CLUSTER_FLAG -eq 1 && $SET_MEET_FLAG -eq 1 ]]
+then
+
+    if [ `echo $CLUSTER_MEET | grep -cE '^((2[0-4][0-9]|25[0-5]|[01]?[0-9][0-9]?)\.){3}(2[0-4][0-9]|25[0-5]|[01]?[0-9][0-9]?):[1-9][0-9]*:[a-z|A-Z]*$'` -ne 1 ]
+    then
+        error_quit "Phase -C option string to 'IP:PORT:ROLE' format failed"
+    fi
+
+    PEER_IP=`echo $CLUSTER_MEET | cut -d ':' -f 1`
+    PEER_PORT=`echo $CLUSTER_MEET | cut -d ':' -f 2`
+    SELF_ROLE=`echo $CLUSTER_MEET | cut -d ':' -f 3`
+
+    if [ `echo $SELF_ROLE | grep -ciw master` -eq 1 ]
+    then
+        SELF_ROLE="MASTER"
+    elif [ `echo $SELF_ROLE | grep -ciw replica` -eq 1 ]
+    then
+        SELF_ROLE='REPLICA'
+    else
+        error_quit "Unknown replication role in cluster mode, must be 'master' or 'replica', please check '-C' option"
     fi
 fi
 
@@ -1258,3 +1296,46 @@ then
 fi
 
 ps -ef | grep -v grep | grep redis | grep $PORT
+
+
+## Configure Redis Cluster
+if [[ $SENTINEL_FLAG -eq 0 && $SET_CLUSTER_FLAG -eq 1 && $SET_MEET_FLAG -eq 1 ]]
+then
+    if [ $SET_PASSWORD_FLAG -eq 1 ]
+    then
+        CON_CMD="redis-cli -h 127.0.0.1 -p $PORT -a $PASSWORD"
+    else
+        CON_CMD="redis-cli -h 127.0.0.1 -p $PORT"
+    fi
+
+    echo "Configuring Redis cluster"
+    EXEC_CMD="$CON_CMD cluster meet $PEER_IP $PEER_PORT 2>/dev/null"
+    RET=$(eval $EXEC_CMD)
+    if [ $RET != 'OK' ]
+    then
+        error_quit "Executing 'CLUSTER MEET $PEER_IP $PEER_PORT' failed->$RET"
+    fi
+
+    if [ $SELF_ROLE = 'REPLICA' ]
+    then
+        EXEC_CMD="$CON_CMD cluster nodes 2>/dev/null | grep -E \"$PEER_IP:$PEER_PORT[\ |@]\" | awk '{print \$1}'"
+        RET=$(eval $EXEC_CMD)
+        if [ ${#RET} -ne 40 ]
+        then
+            error_quit "Executing 'CLUSTER NODES' failed"
+        fi
+
+        MASTER_NODE_ID=$RET
+        EXEC_CMD="$CON_CMD cluster replicate $MASTER_NODE_ID 2>/dev/null"
+        RET=$(eval $EXEC_CMD)
+        if [ $RET != 'OK' ]
+        then
+            error_quit "Executing 'CLUSTER REPLICATE $MASTER_NODE_ID' failed->$RET"
+        fi
+    fi
+
+    EXEC_CMD="$CON_CMD cluster nodes 2>/dev/null"
+    eval $EXEC_CMD
+fi
+
+echo `tput bold`"Everything succeed !!!"`tput sgr0`
