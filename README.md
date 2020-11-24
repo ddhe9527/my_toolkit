@@ -1,4 +1,4 @@
-这是一个自用的MySQL工具集，后续将逐步增加更多脚本
+这是一个自用的DBA工具集，当前已包括mycnf_helper、redis_helper，后续将逐步增加更多脚本
 
 Email：heduoduo321@163.com
 
@@ -194,4 +194,9 @@ rpl_semi_sync_master_enabled = ON
 rpl_semi_sync_slave_enabled = ON
 rpl_semi_sync_master_timeout = 5000
 ```
+
+
+## redis_helper
+
+#### redis_helper主要有如下两个功能：
 
