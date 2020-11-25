@@ -2,6 +2,7 @@
 
 
 ## Default values
+WAIT_TIME=30
 REDIS_CONFIG_FILE=$PWD/redis.conf
 SENTINEL_CONFIG_FILE=$PWD/sentinel.conf
 CURRENT_DIR=$PWD
@@ -1323,11 +1324,22 @@ then
 
     if [ $SELF_ROLE = 'REPLICA' ]
     then
+        echo "Waiting for CLUSTER MEET handshake..."
+        while [[ $WAIT_TIME -ne 0 ]]
+        do
+            sleep 1
+            echo -n "."
+            let WAIT_TIME=$WAIT_TIME-1
+        done
+        echo
+
         EXEC_CMD="$CON_CMD cluster nodes 2>/dev/null | grep -E \"$PEER_IP:$PEER_PORT[\ |@]\" | awk '{print \$1}'"
         RET=$(eval $EXEC_CMD)
         if [ ${#RET} -ne 40 ]
         then
-            error_quit "Executing 'CLUSTER NODES' failed"
+            EXEC_CMD="$CON_CMD cluster nodes 2>/dev/null"
+            eval $EXEC_CMD
+            error_quit "Getting target node_id via 'CLUSTER NODES' failed"
         fi
 
         MASTER_NODE_ID=$RET
