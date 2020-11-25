@@ -574,6 +574,22 @@ then
                     error_quit "Phase 'logfile' from $CNF_FILE failed"
                 fi
 
+                ## requirepass
+                if [ `cat $CNF_FILE  | grep -cw ^requirepass` -eq 1 ]
+                then
+                    PASSWORD=`cat $CNF_FILE | grep -w ^requirepass | awk '{print $2}' | tr -d '"'`
+                    SET_PASSWORD_FLAG=1
+                fi
+
+                ## cluster-enabled
+                if [ `cat $CNF_FILE  | grep -cw ^cluster-enabled` -eq 1 ]
+                then
+                    if [ `cat $CNF_FILE | grep -w ^cluster-enabled | grep -ci yes` -eq 1 ]
+                    then
+                        SET_CLUSTER_FLAG=1
+                    fi
+                fi
+
                 if [ $SENTINEL_FLAG -eq 0 ]
                 then
                     ## maxmemory
@@ -1301,7 +1317,7 @@ then
     error_quit "Start redis instance failed"
 fi
 
-ps -ef | grep -v grep | grep redis | grep $PORT
+ps -ef | grep -v grep | grep redis | grep $PORT | grep -v redis_helper
 
 
 ## Configure Redis Cluster

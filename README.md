@@ -200,3 +200,206 @@ rpl_semi_sync_master_timeout = 5000
 
 #### redis_helper主要有如下两个功能：
 
+1. 生成适用于特定Redis版本的配置文件，支持对RDB持久化、AOF持久化、port、dir、maxmemory、requirepass、replicaof等配置进行自定义，支持Redis Cluster、Sentinel部署模式。当前已适配了Redis 3.0.0~6.0.9版本，后续版本如果有新增或删减参数，将持续更新到代码中
+2. 在功能1的基础上，直接在当前服务器上编译安装Redis程序，并启动运行。安装过程中会根据Redis运行需求对操作系统内核参数、SELinux、防火墙、透明大页和用户limits等进行配置
+
+#### 选项说明：
+
+- -A：打开AOF持久化，默认处于关闭状态
+- -c：开启集群模式，默认处于关闭状态
+- -C：当实例以集群模式并启动运行后，指定与哪个cluster node进行MEET，即加入现有集群。此外还可以指定自己成为该cluster node的replica。格式为：IP:PORT:ROLE，其中ROLE只能是'master'或'replica'
+- -d：指定dir参数。默认值为./(sentinel默认值为/tmp)
+- -f：如果已经有现成的redis配置文件，则使用-f选项指定该文件安装启动运行实例
+- -h：打印帮助信息并退出
+- -m：指定maxmemory参数，默认值为1024mb，如果当前服务器的总内存小于1224mb，则默认值为"总内存 - 200mb"。注意maxmemory不能大于"物理总内存-200mb"
+- -M：指定sentinel monitor参数，格式为：MASTER_NAME:IP:PORT:QUORUM
+- -n：指定NTP服务器的IP地址，默认不配置NTP
+- -o：指定要生成的配置文件的路径和名称，仅支持绝对路径，默认为当前目录下的redis.conf或sentinel.conf
+- -p：指定port参数，默认值为6379(sentinel默认为26379)
+- -P：指定requirepass参数，默认没有密码
+- -r：指定replicaof参数，格式为：IP:PORT
+- -R：开启RDB持久化，默认处于关闭状态
+- -s：sentinel模式
+- -S：安装部署Redis二进制程序，默认仅生成配置文件，不安装
+- -u：指定以某个操作系统用户身份来启动运行redis实例，该用户必须已存在，并且具有必要的权限
+- -v：指定redis版本信息
+- -x：在主从复制场景中，如果master设置了密码，则用该选项为replica设置masterauth参数，或为sentinel设置auth-pass
+
+#### 注意事项：
+
+- 必须确保yum源可用，否则安装过程会报错
+- 安装过程中会修改Linux内核参数、调整用户资源限制、关闭SELinux和防火墙等
+- 脚本会自动读取当前目录下与“-v”选项指定的版本号所对应的Redis二进制包进行安装。例如：-v选项指定3.0.0，那么脚本会尝试在当前路径中查找类似"redis-3.0.0.zip"或"redis-3.0.0.tar.gz"的文件用于后续安装
+- -v为强制选项，必须显式指定
+- 当使用-s选项部署sentinel时，-M选项是强制选项，必须显式指定
+- 当使用-c和-C选项部署Redis Cluster时，脚本仅支持到"CLUSTER MEET"和"CLUSTER REPLICATE"步骤，即仅支持到加入集群和建立复制关系(可选)步骤，后续的SLOT迁移和分配则必须手动来完成
+
+#### 使用范畴：
+
+- 操作系统：CentOS/Red Hat 5.X ~ 8.X x86_64
+- Redis版本：3.0.0及以上版本。已测试的版本为3.0.0~6.0.9
+
+#### 使用范例：
+
+范例一：生成适用于6.0.3版本redis的配置文件/var/redis/6380.conf，集群模式，占用内存上限为2GB，端口号为6380，dir为/var/redis/6380，开启RDB和AOF持久化：
+
+```
+./redis_helper.sh -v 6.0.3 -c -m 2048mb -p 6380 -d /var/redis/6380/ -o /var/redis/6380.conf -A -R
+```
+
+范例二：使用"范例一"创建的/var/redis/6380.conf，安装部署redis实例并启动，同时配置NTP时间同步，NTP Server为192.168.0.101。启动实例后，与192.168.0.50:6379实例进行meet，并成为该实例的replica
+
+```
+./redis_helper.sh -v 6.0.3 -f /var/redis/6380.conf -n 192.168.0.101 -C 192.168.0.50:6379:replica -S
+```
+
+范例三：等价于"范例一"和"范例二"的组合
+
+```
+./redis_helper.sh -v 6.0.3 -c -m 2048mb -p 6380 -d /var/redis/6380/ -o /var/redis/6380.conf -A -R -n 192.168.0.101 -C 192.168.0.50:6379:replica -S
+```
+
+#### 附录：
+
+“范例一”生成的/var/redis/6380.conf 文件内容：
+
+```
+# include
+# loadmodule
+bind 0.0.0.0
+protected-mode yes
+port 6380
+tcp-backlog 511
+# unixsocket
+# unixsocketperm
+timeout 0
+tcp-keepalive 60
+# tls-port
+# tls-cert-file
+# tls-key-file
+# tls-dh-params-file
+# tls-ca-cert-file
+# tls-ca-cert-dir
+# tls-auth-clients
+# tls-replication
+# tls-cluster
+# tls-protocols
+# tls-ciphers
+# tls-ciphersuites
+# tls-prefer-server-ciphers
+daemonize yes
+supervised no
+pidfile /var/redis/6380/redis_6380.pid
+loglevel notice
+logfile /var/redis/6380/redis_6380.log
+# syslog-enabled
+# syslog-ident
+# syslog-facility
+databases 16
+always-show-logo yes
+save 900 1
+save 300 10
+save 60 10000
+stop-writes-on-bgsave-error yes
+rdbcompression yes
+rdbchecksum yes
+dbfilename dump_6380.rdb
+rdb-del-sync-files no
+dir /var/redis/6380/
+# replicaof
+# masterauth
+# masteruser
+replica-serve-stale-data yes
+replica-read-only yes
+repl-diskless-sync no
+repl-diskless-sync-delay 5
+repl-diskless-load disabled
+# repl-ping-replica-period
+repl-timeout 60
+repl-disable-tcp-nodelay no
+repl-backlog-size 20mb
+repl-backlog-ttl 7200
+replica-priority 100
+# min-replicas-to-write
+# min-replicas-max-lag
+# replica-announce-ip
+# replica-announce-port
+# tracking-table-max-keys
+# user
+acllog-max-len 128
+# aclfile
+# requirepass
+# rename-command
+maxclients 10000
+maxmemory 2048mb
+maxmemory-policy volatile-ttl
+# maxmemory-samples
+# replica-ignore-maxmemory
+# active-expire-effort
+lazyfree-lazy-eviction yes
+lazyfree-lazy-expire yes
+lazyfree-lazy-server-del yes
+replica-lazy-flush yes
+lazyfree-lazy-user-del yes
+# io-threads
+# io-threads-do-reads
+appendonly yes
+appendfilename appendonly_6380.aof
+appendfsync everysec
+no-appendfsync-on-rewrite yes
+auto-aof-rewrite-percentage 100
+auto-aof-rewrite-min-size 64mb
+aof-load-truncated yes
+aof-use-rdb-preamble yes
+lua-time-limit 5000
+cluster-enabled yes
+cluster-config-file cluster_node_6380.conf
+cluster-node-timeout 15000
+cluster-replica-validity-factor 10
+cluster-migration-barrier 1
+cluster-require-full-coverage no
+# cluster-replica-no-failover
+cluster-allow-reads-when-down yes
+# cluster-announce-ip
+# cluster-announce-port
+# cluster-announce-bus-port
+slowlog-log-slower-than 10000
+slowlog-max-len 128
+latency-monitor-threshold 0
+notify-keyspace-events ""
+# gopher-enabled
+hash-max-ziplist-entries 512
+hash-max-ziplist-value 64
+list-max-ziplist-size -2
+list-compress-depth 0
+set-max-intset-entries 512
+zset-max-ziplist-entries 128
+zset-max-ziplist-value 64
+hll-sparse-max-bytes 3000
+stream-node-max-bytes 4096
+stream-node-max-entries 100
+activerehashing yes
+client-output-buffer-limit normal 0 0 0
+client-output-buffer-limit replica 512mb 128mb 60
+client-output-buffer-limit pubsub 32mb 8mb 60
+# client-query-buffer-limit
+# proto-max-bulk-len
+hz 10
+dynamic-hz yes
+aof-rewrite-incremental-fsync yes
+rdb-save-incremental-fsync yes
+# lfu-log-factor
+# lfu-decay-time
+activedefrag yes
+# active-defrag-ignore-bytes
+# active-defrag-threshold-lower
+# active-defrag-threshold-upper
+# active-defrag-cycle-min
+# active-defrag-cycle-max
+# active-defrag-max-scan-fields
+jemalloc-bg-thread yes
+# server_cpulist
+# bio_cpulist
+# aof_rewrite_cpulist
+# bgsave_cpulist
+```
