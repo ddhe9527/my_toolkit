@@ -1317,7 +1317,7 @@ then
     echo "Configuring Redis cluster"
     EXEC_CMD="$CON_CMD cluster meet $PEER_IP $PEER_PORT 2>/dev/null"
     RET=$(eval $EXEC_CMD)
-    if [ $RET != 'OK' ]
+    if [ "$RET" != 'OK' ]
     then
         error_quit "Executing 'CLUSTER MEET $PEER_IP $PEER_PORT' failed->$RET"
     fi
@@ -1345,7 +1345,7 @@ then
         MASTER_NODE_ID=$RET
         EXEC_CMD="$CON_CMD cluster replicate $MASTER_NODE_ID 2>/dev/null"
         RET=$(eval $EXEC_CMD)
-        if [ $RET != 'OK' ]
+        if [ "$RET" != 'OK' ]
         then
             error_quit "Executing 'CLUSTER REPLICATE $MASTER_NODE_ID' failed->$RET"
         fi
