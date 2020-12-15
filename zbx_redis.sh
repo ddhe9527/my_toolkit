@@ -58,6 +58,11 @@ PING)
     RESULT=`eval $CMD 2>/dev/null` || exit 7
     echo $RESULT
     ;;
+CLUSTER)
+    CMD=$CMD'CLUSTER INFO'
+    RESULT=`eval $CMD | grep cluster_state 2>/dev/null` || exit 14
+    echo $RESULT | cut -d ':' -f 2
+    ;;
 SLOWLOG)
     CMD_TMP=$CMD'CONFIG GET slowlog-max-len'
     SLOWLOG_MAX_LEN=`eval $CMD_TMP 2>/dev/null` || exit 8
