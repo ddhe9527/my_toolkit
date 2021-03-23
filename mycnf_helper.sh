@@ -512,6 +512,10 @@ then
     echo "@type:semi-replication@0@999999@rpl_semi_sync_master_enabled = ON" >> $TMP_FILE
     echo "@type:semi-replication@0@999999@rpl_semi_sync_slave_enabled = ON" >> $TMP_FILE
     echo "@type:semi-replication@0@999999@rpl_semi_sync_master_timeout = 5000" >> $TMP_FILE
+    echo "@type:semi-replication@50733@50799@replication_optimize_for_static_plugin_config = ON" >> $TMP_FILE
+    echo "@type:semi-replication@80023@999999@replication_optimize_for_static_plugin_config = ON" >> $TMP_FILE
+    echo "@type:semi-replication@50733@50799@replication_sender_observe_commit_only = ON" >> $TMP_FILE
+    echo "@type:semi-replication@80023@999999@replication_sender_observe_commit_only = ON" >> $TMP_FILE
 
     ##Master master replication
     if [ $MM_FLAG -eq 1 ]
