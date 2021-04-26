@@ -368,7 +368,6 @@ then
     echo "@type:common@0@999999@transaction_isolation = READ-COMMITTED" >> $TMP_FILE
     echo "@type:common@0@999999@lower_case_table_names = 1" >> $TMP_FILE
     echo "@type:common@0@999999@sync_binlog = 1" >> $TMP_FILE
-    echo "@type:common@0@999999@report_host = "`hostname` >> $TMP_FILE
     echo "@type:common@0@999999@secure_file_priv = $DATA_DIR/tmp" >> $TMP_FILE
     echo "@type:common@0@999999@log_bin = $DATA_DIR/binlog/bin.log" >> $TMP_FILE
     echo "@type:common@0@999999@binlog_format = ROW" >> $TMP_FILE
