@@ -1371,7 +1371,7 @@ then
             echo "================================================================================"
             echo "You can use this command to create compressed full backup(recommanded on slave):"
             echo "xtrabackup --defaults-file=$DEFAULTS_FILE --backup --user=root \\"
-            echo "--password=$ROOT_PASSWD --parallel=4 --slave-info \\"
+            echo "--password=$ROOT_PASSWD --parallel=4 --backup-lock-timeout=300 --slave-info \\"
             echo "--safe-slave-backup --stream=xbstream --compress --compress-threads=4 \\"
             echo "--socket=$MYSQLD_SOCK 2>/dbbak/backup.log 1>$OUTPUT_FILE"
             echo "================================================================================"
