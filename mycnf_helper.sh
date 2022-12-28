@@ -443,7 +443,6 @@ then
         echo "@type:common@50603@999999@innodb_flush_neighbors = 1" >> $TMP_FILE
     fi
     ##innodb_io_capacity
-    let IO_CAP=$IO_CAP/2
     if [ $IO_CAP -gt 20000 ]
     then
         IO_CAP=20000
