@@ -6,6 +6,7 @@ DATA_DIR=/mysql_data
 BASE_DIR=/usr/local/mysql
 TMP_FILE=/tmp/mycnf_helper.log
 MY_PORT=3306
+MASTER_PORT=3306
 IO_CAP=4000
 OLDEST_MYSQL_VERSION=50609
 SERVER_ID=$RANDOM               ##random number between 0 and 32767
@@ -55,6 +56,7 @@ Usage:
 -t:          install tools: XtraBackup etc.
 -v: <string> MySQL Server version. eg: 5.6.32, 5.7.22, 8.0.1
 -x: <string> replication master IP address that will be used in "CHANGE MASTER TO" statement
+-X: <number> replication master PORT that will be used in "CHANGE MASTER TO" statement
 -y: <string> own IP address that will be used in reversed "CHANGE MASTER TO" statement to
              build master-master topology
 -z:          make mysqld autostart with the operation system
@@ -174,6 +176,9 @@ do
         x)
             MASTER_IP_FLAG=1
             MASTER_IP=$OPTARG;;
+        X)
+            MASTER_PORT_FLAG=1
+            MASTER_PORT=$OPTARG;;
         y)
             OWN_IP_FLAG=1
             OWN_IP=$OPTARG;;
@@ -896,7 +901,7 @@ then
 fi
 
 
-## Check master's IP address if it's slave or master-master replication
+## Check master's IP address and PORT if it's slave or master-master replication
 if [[ $REPL_ROLE = 'S' || $MM_FLAG -eq 1 ]]
 then
     if [ $MASTER_IP_FLAG -eq 1 ]
@@ -904,6 +909,14 @@ then
         if [ `echo $MASTER_IP | grep -E '^((2[0-4][0-9]|25[0-5]|[01]?[0-9][0-9]?)\.){3}(2[0-4][0-9]|25[0-5]|[01]?[0-9][0-9]?)$' | wc -l` -eq 0 ]
         then
             error_quit "Invalid IP address for replication master, use -x to specify the right IP"
+        fi
+    fi
+
+    if [ $MASTER_PORT_FLAG -eq 1 ]
+    then
+        if [ `echo $MASTER_PORT | sed -n '/^[1-9][0-9]*$/p' | wc -l` -eq 0 ]
+        then
+            error_quit "Invalid PORT for replication master, use -X to specify the right PORT"
         fi
     fi
 fi
@@ -1137,7 +1150,7 @@ then
     if [ $MASTER_IP_FLAG -eq 1 ]
     then
         ## Check server_id variable, make sure it's different between current mysqld and remote mysqld
-        SERVER_ID_X=`$BASE_DIR/bin/mysql -urepl -p$REPL_PASSWD -h$MASTER_IP -N --batch -e "SHOW VARIABLES LIKE 'server_id';" 2>/dev/null | awk '{print $2}'`
+        SERVER_ID_X=`$BASE_DIR/bin/mysql -urepl -p$REPL_PASSWD -h$MASTER_IP -P$MASTER_PORT -N --batch -e "SHOW VARIABLES LIKE 'server_id';" 2>/dev/null | awk '{print $2}'`
         if [ -z "$SERVER_ID_X" ]
         then
             echo "Getting master's server_id failed, one-way replication will not be established"
@@ -1154,7 +1167,7 @@ then
         then
             echo "Establishing one-way replication relationship by executing 'CHANGE MASTER TO' statement"
             $BASE_DIR/bin/mysql -uroot -p$ROOT_PASSWD -S$MYSQLD_SOCK -e "
-            CHANGE MASTER TO MASTER_HOST='$MASTER_IP',MASTER_USER='repl',MASTER_PASSWORD='$REPL_PASSWD',MASTER_AUTO_POSITION=1;
+            CHANGE MASTER TO MASTER_HOST='$MASTER_IP',MASTER_PORT=$MASTER_PORT,MASTER_USER='repl',MASTER_PASSWORD='$REPL_PASSWD',MASTER_AUTO_POSITION=1;
             START SLAVE;"  &>/dev/null
             if [ $? -ne 0 ]
             then
@@ -1168,19 +1181,19 @@ then
         if [[ $OWN_IP_FLAG -eq 1 && $MM_FLAG -eq 1 && $FAIL_FLAG -eq 0 ]]
         then
             echo "Establishing master-master replication relationship by executing 'CHANGE MASTER TO' statement on remote server"
-            AUTO_INCREMENT_OFFSET_X=`$BASE_DIR/bin/mysql -urepl -p$REPL_PASSWD -h$MASTER_IP -N --batch -e "SHOW VARIABLES LIKE 'auto_increment_offset';" 2>/dev/null | awk '{print $2}'`
+            AUTO_INCREMENT_OFFSET_X=`$BASE_DIR/bin/mysql -urepl -p$REPL_PASSWD -h$MASTER_IP -P$MASTER_PORT -N --batch -e "SHOW VARIABLES LIKE 'auto_increment_offset';" 2>/dev/null | awk '{print $2}'`
             if [ -z "$AUTO_INCREMENT_OFFSET_X" ]
             then
                 echo "Getting other side's auto_increment_offset failed, master-master replication will not be established"
                 FAIL_FLAG=1
             fi
-            AUTO_INCREMENT_INCREMENT_X=`$BASE_DIR/bin/mysql -urepl -p$REPL_PASSWD -h$MASTER_IP -N --batch -e "SHOW VARIABLES LIKE 'auto_increment_increment';" 2>/dev/null | awk '{print $2}'`
+            AUTO_INCREMENT_INCREMENT_X=`$BASE_DIR/bin/mysql -urepl -p$REPL_PASSWD -h$MASTER_IP -P$MASTER_PORT -N --batch -e "SHOW VARIABLES LIKE 'auto_increment_increment';" 2>/dev/null | awk '{print $2}'`
             if [ -z "$AUTO_INCREMENT_INCREMENT_X" ]
             then
                 echo "Getting other side's auto_increment_increment failed, master-master replication will not be established"
                 FAIL_FLAG=1
             fi
-            EVENT_SCHEDULER_X=`$BASE_DIR/bin/mysql -urepl -p$REPL_PASSWD -h$MASTER_IP -N --batch -e "SHOW VARIABLES LIKE 'event_scheduler';" 2>/dev/null | awk '{print $2}'`
+            EVENT_SCHEDULER_X=`$BASE_DIR/bin/mysql -urepl -p$REPL_PASSWD -h$MASTER_IP -P$MASTER_PORT -N --batch -e "SHOW VARIABLES LIKE 'event_scheduler';" 2>/dev/null | awk '{print $2}'`
             if [ -z "$EVENT_SCHEDULER_X" ]
             then
                 echo "Getting other side's event_scheduler failed, master-master replication will not be established"
@@ -1214,8 +1227,8 @@ then
             ## Execute "CHANGE MASTER TO" statement on remote mysqld
             if  [ $FAIL_FLAG -eq 0 ]
             then
-                $BASE_DIR/bin/mysql -urepl -p$REPL_PASSWD -h$MASTER_IP -e "
-                CHANGE MASTER TO MASTER_HOST='$OWN_IP',MASTER_USER='repl',MASTER_PASSWORD='$REPL_PASSWD',MASTER_AUTO_POSITION=1;
+                $BASE_DIR/bin/mysql -urepl -p$REPL_PASSWD -h$MASTER_IP -P$MASTER_PORT -e "
+                CHANGE MASTER TO MASTER_HOST='$OWN_IP',MASTER_PORT=$MY_PORT,MASTER_USER='repl',MASTER_PASSWORD='$REPL_PASSWD',MASTER_AUTO_POSITION=1;
                 START SLAVE;"  &>/dev/null
                 if [ $? -ne 0 ]
                 then
@@ -1223,7 +1236,7 @@ then
                 else
                     echo "Establishing master-master replication relationship succeed"
                 fi
-            fi           
+            fi
         fi
     fi
 fi
