@@ -128,7 +128,7 @@ function error_quit(){
 }
 
 ## Phase options
-while getopts "ab:c:d:f:hi:I:m:M:n:o:p:r:sStv:x:y:z" opt
+while getopts "ab:c:d:f:hi:I:m:M:n:o:p:r:sStv:x:X:y:z" opt
 do
     case $opt in
         a)
@@ -299,7 +299,7 @@ then
         if [[ $AUTO_INCREMENT_OFFSET -eq 1 || $AUTO_INCREMENT_OFFSET -eq 2 ]]
         then
             echo "Master-Master replication is enabled, auto_increment_offset = $AUTO_INCREMENT_OFFSET"
-            REPL_ROLE=M
+            REPL_ROLE=master
         else
             error_quit "Invalid auto_increment_offset, use -M to specify(1 or 2)"
         fi
