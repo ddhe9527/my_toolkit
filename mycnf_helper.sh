@@ -370,6 +370,7 @@ then
     echo "@type:common@0@999999@autocommit = ON" >> $TMP_FILE
     echo "@type:common@0@999999@character_set_server = utf8mb4" >> $TMP_FILE
     echo "@type:common@0@999999@collation_server = utf8mb4_unicode_ci" >> $TMP_FILE
+    echo "@type:common@0@999999@max_prepared_stmt_count = 163820" >> $TMP_FILE
     echo "@type:common@0@999999@transaction_isolation = READ-COMMITTED" >> $TMP_FILE
     echo "@type:common@0@999999@lower_case_table_names = 1" >> $TMP_FILE
     echo "@type:common@0@999999@sync_binlog = 1" >> $TMP_FILE
