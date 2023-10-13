@@ -475,6 +475,7 @@ then
     else
         THREAD_CONCURRENCY=$CPU_CORE_COUNT
     fi
+    THREAD_CONCURRENCY=0 ## 2023-10-14, avoid too many queries in queue
     echo "@type:common@0@999999@innodb_thread_concurrency = $THREAD_CONCURRENCY" >> $TMP_FILE
     ##
     echo "@type:common@0@999999@innodb_lock_wait_timeout = 10" >> $TMP_FILE
