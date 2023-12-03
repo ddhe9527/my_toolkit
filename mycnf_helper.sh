@@ -5,11 +5,12 @@ MY_CNF=$PWD/my.cnf
 DATA_DIR=/mysql_data
 BASE_DIR=/usr/local/mysql
 TMP_FILE=/tmp/mycnf_helper.log
+ERR_FILE=/tmp/mycnf_helper.err
 MY_PORT=3306
 MASTER_PORT=3306
 IO_CAP=4000
 OLDEST_MYSQL_VERSION=50609
-SERVER_ID=$RANDOM               ##random number between 0 and 32767
+SERVER_ID=$RANDOM$RANDOM        ##each random number is between 0 and 32767
 ROOT_PASSWD=Mycnf_helper123!    ##password for 'root'@'localhost' with ALL privilege
 REPL_PASSWD=Mycnf_helper456!    ##password for 'repl'@'%' with REPLICATION SLAVE and SUPER privilege
 WAIT_TIME=30                    ##Sleep time(second) before checking the mysqld process
@@ -35,7 +36,7 @@ function usage()
 echo 'mycnf_helper has two main functions:
 1): generate a best-practice my.cnf for specific MySQL version(default behavior)
 2): install MySQL Server(with -s option)
-=====================================================================================================
+======================================================================================================
 Usage:
 -a:          automatically gets CPU core count and memory capacity from current server
 -b: <string> MySQL Server base directory(default: /usr/local/mysql)
@@ -54,13 +55,13 @@ Usage:
 -s:          generate a my.cnf file and setup the MySQL Server
 -S:          use SSD storage(for innodb_flush_neighbors)
 -t:          install tools: XtraBackup etc.
--v: <string> MySQL Server version. eg: 5.6.32, 5.7.22, 8.0.1
+-v: <string> MySQL Server version(do not support RC version), eg: 5.6.51, 5.7.44, 8.0.35, 8.1.0, 8.2.0
 -x: <string> replication master IP address that will be used in "CHANGE MASTER TO" statement
 -X: <number> replication master PORT that will be used in "CHANGE MASTER TO" statement
 -y: <string> own IP address that will be used in reversed "CHANGE MASTER TO" statement to
              build master-master topology
 -z:          make mysqld autostart with the operation system
-=====================================================================================================
+======================================================================================================
 Theoretically supported platforms(x86_64):
     * Red Hat 5.x ~ 8.x
     * CentOS  5.x ~ 8.x
@@ -376,7 +377,7 @@ then
     echo "@type:common@0@999999@sync_binlog = 1" >> $TMP_FILE
     echo "@type:common@0@999999@secure_file_priv = $DATA_DIR/tmp" >> $TMP_FILE
     echo "@type:common@0@999999@log_bin = $DATA_DIR/binlog/bin.log" >> $TMP_FILE
-    echo "@type:common@0@999999@binlog_format = ROW" >> $TMP_FILE
+    echo "@type:common@0@80033@binlog_format = ROW" >> $TMP_FILE
     echo "@type:common@0@80000@expire_logs_days = 15" >> $TMP_FILE
     echo "@type:common@80001@999999@binlog_expire_logs_seconds = 1296000" >> $TMP_FILE
     echo "@type:common@50602@999999@binlog_rows_query_log_events = ON" >> $TMP_FILE
@@ -388,11 +389,12 @@ then
     echo "@type:common@50605@999999@log_throttle_queries_not_using_indexes = 10" >> $TMP_FILE
     echo "@type:common@0@999999@long_query_time = 2" >> $TMP_FILE
     echo "@type:common@50611@999999@log_slow_admin_statements = ON" >> $TMP_FILE
-    echo "@type:common@50611@999999@log_slow_slave_statements = ON" >> $TMP_FILE
+    echo "@type:common@50611@80025@log_slow_slave_statements = ON" >> $TMP_FILE
+    echo "@type:common@80026@999999@log_slow_replica_statements = ON" >> $TMP_FILE
     echo "@type:common@0@999999@min_examined_row_limit = 100" >> $TMP_FILE
     echo "@type:common@50702@999999@log_timestamps = SYSTEM" >> $TMP_FILE
-    echo "@type:common@0@50723@sql_mode = NO_ENGINE_SUBSTITUTION,STRICT_TRANS_TABLES,NO_ZERO_DATE,NO_ZERO_IN_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_AUTO_CREATE_USER,ONLY_FULL_GROUP_BY" >> $TMP_FILE
-    echo "@type:common@50724@999999@sql_mode = NO_ENGINE_SUBSTITUTION,STRICT_TRANS_TABLES,NO_ZERO_DATE,NO_ZERO_IN_DATE,ERROR_FOR_DIVISION_BY_ZERO,ONLY_FULL_GROUP_BY" >> $TMP_FILE
+    echo "@type:common@0@50799@sql_mode = NO_ENGINE_SUBSTITUTION,STRICT_TRANS_TABLES,NO_ZERO_DATE,NO_ZERO_IN_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_AUTO_CREATE_USER,ONLY_FULL_GROUP_BY" >> $TMP_FILE
+    echo "@type:common@80000@999999@sql_mode = NO_ENGINE_SUBSTITUTION,STRICT_TRANS_TABLES,NO_ZERO_DATE,NO_ZERO_IN_DATE,ERROR_FOR_DIVISION_BY_ZERO,ONLY_FULL_GROUP_BY" >> $TMP_FILE
     echo "@type:common@0@50703@metadata_locks_hash_instances = 256" >> $TMP_FILE
     echo "@type:common@50606@999999@table_open_cache_instances = 16" >> $TMP_FILE
     echo "@type:common@0@999999@max_connections = 800" >> $TMP_FILE
@@ -456,9 +458,10 @@ then
     echo "@type:common@0@999999@innodb_io_capacity = $IO_CAP" >> $TMP_FILE
     ##
     echo "@type:common@0@999999@innodb_flush_method = O_DIRECT" >> $TMP_FILE
-    echo "@type:common@0@999999@innodb_log_file_size = 2048M" >> $TMP_FILE
     echo "@type:common@0@999999@innodb_log_group_home_dir = $DATA_DIR/redolog" >> $TMP_FILE
-    echo "@type:common@0@999999@innodb_log_files_in_group = 4" >> $TMP_FILE
+    echo "@type:common@0@80029@innodb_log_file_size = 2048M" >> $TMP_FILE
+    echo "@type:common@0@80029@innodb_log_files_in_group = 4" >> $TMP_FILE
+    echo "@type:common@80030@999999@innodb_redo_log_capacity = 8192M" >> $TMP_FILE
     echo "@type:common@0@999999@innodb_log_buffer_size = 32M" >> $TMP_FILE
     echo "@type:common@50603@999999@innodb_undo_directory = $DATA_DIR/undolog" >> $TMP_FILE
     echo "@type:common@50603@80013@innodb_undo_tablespaces = 3" >> $TMP_FILE
@@ -503,21 +506,29 @@ then
         echo "@type:replication@50708@999999@super_read_only = ON" >> $TMP_FILE
     fi
     ##Turn GTID on
-    echo "@type:replication@0@999999@log_slave_updates = ON" >> $TMP_FILE
+    echo "@type:replication@0@80025@log_slave_updates = ON" >> $TMP_FILE
+    echo "@type:replication@80026@999999@log_replica_updates = ON" >> $TMP_FILE
     echo "@type:replication@50605@999999@gtid_mode = ON" >> $TMP_FILE
     echo "@type:replication@50609@999999@enforce_gtid_consistency = ON" >> $TMP_FILE
     ##
     echo "@type:replication@0@999999@relay_log = $DATA_DIR/relaylog/relay.log" >> $TMP_FILE
-    echo "@type:replication@50602@999999@master_info_repository = TABLE" >> $TMP_FILE
-    echo "@type:replication@50602@999999@relay_log_info_repository = TABLE" >> $TMP_FILE
+    echo "@type:replication@50602@80022@master_info_repository = TABLE" >> $TMP_FILE
+    echo "@type:replication@50602@80022@relay_log_info_repository = TABLE" >> $TMP_FILE
     echo "@type:replication@0@999999@relay_log_recovery = ON" >> $TMP_FILE
-    echo "@type:replication@0@999999@skip_slave_start = ON" >> $TMP_FILE
+    echo "@type:replication@0@80025@skip_slave_start = ON" >> $TMP_FILE
+    echo "@type:replication@80026@999999@skip_replica_start = ON" >> $TMP_FILE
 
     ##Semi sync replication
-    echo '@type:semi-replication@0@999999@plugin_load = "rpl_semi_sync_master=semisync_master.so;rpl_semi_sync_slave=semisync_slave.so"' >> $TMP_FILE
-    echo "@type:semi-replication@0@999999@rpl_semi_sync_master_enabled = ON" >> $TMP_FILE
-    echo "@type:semi-replication@0@999999@rpl_semi_sync_slave_enabled = ON" >> $TMP_FILE
-    echo "@type:semi-replication@0@999999@rpl_semi_sync_master_timeout = 5000" >> $TMP_FILE
+    echo '@type:semi-replication@0@80025@plugin_load = "rpl_semi_sync_master=semisync_master.so;rpl_semi_sync_slave=semisync_slave.so"' >> $TMP_FILE
+    echo "@type:semi-replication@0@80025@rpl_semi_sync_master_enabled = ON" >> $TMP_FILE
+    echo "@type:semi-replication@0@80025@rpl_semi_sync_slave_enabled = ON" >> $TMP_FILE
+    echo "@type:semi-replication@0@80025@rpl_semi_sync_master_timeout = 5000" >> $TMP_FILE
+
+    echo '@type:semi-replication@80026@999999@plugin_load = "rpl_semi_sync_source=semisync_source.so;rpl_semi_sync_replica=semisync_replica.so"' >> $TMP_FILE
+    echo "@type:semi-replication@80026@999999@rpl_semi_sync_source_enabled = ON" >> $TMP_FILE
+    echo "@type:semi-replication@80026@999999@rpl_semi_sync_replica_enabled = ON" >> $TMP_FILE
+    echo "@type:semi-replication@80026@999999@rpl_semi_sync_source_timeout = 5000" >> $TMP_FILE
+
     echo "@type:semi-replication@50733@50799@replication_optimize_for_static_plugin_config = ON" >> $TMP_FILE
     echo "@type:semi-replication@80023@999999@replication_optimize_for_static_plugin_config = ON" >> $TMP_FILE
     echo "@type:semi-replication@50733@50799@replication_sender_observe_commit_only = ON" >> $TMP_FILE
@@ -833,9 +844,9 @@ fi
 echo "Installing necessary packages..."
 if [ $OS_VER_NUM -lt 8 ]
 then
-    yum install -y net-tools libaio libaio-devel numactl-libs ncurses-compat-libs numactl autoconf xz perl-Module* ntp &>/dev/null
+    yum install -y net-tools libaio libaio-devel numactl-libs ncurses-compat-libs numactl autoconf xz perl-Module* ntp &>>$ERR_FILE
 else
-    yum install -y net-tools libaio libaio-devel numactl-libs ncurses-compat-libs numactl autoconf xz perl-Module* &>/dev/null
+    yum install -y net-tools libaio libaio-devel numactl-libs ncurses-compat-libs numactl autoconf xz perl-Module* &>>$ERR_FILE
 fi
 if [ $? -eq 1 ]
 then
@@ -981,7 +992,7 @@ fi
 echo "Executing tar -xvf $MYSQL_PACKAGE to $BASE_DIR..."
 if [[ ${MYSQL_PACKAGE##*.} = 'gz' || ${MYSQL_PACKAGE##*.} = 'tar' ]]
 then
-    tar -xvf $MYSQL_PACKAGE -C $BASE_DIR --strip-components 1 &>/dev/null
+    tar -xvf $MYSQL_PACKAGE -C $BASE_DIR --strip-components 1 &>>$ERR_FILE
 elif [ ${MYSQL_PACKAGE##*.} = 'xz' ]
 then
     xz -d $MYSQL_PACKAGE
@@ -989,7 +1000,7 @@ then
     then
         error_quit "Executing xz -d failed"
     fi
-    tar -xvf ${MYSQL_PACKAGE%.*} -C $BASE_DIR --strip-components 1 &>/dev/null
+    tar -xvf ${MYSQL_PACKAGE%.*} -C $BASE_DIR --strip-components 1 &>>$ERR_FILE
 else
     error_quit "Unknown package for uncompressing"
 fi
@@ -1057,19 +1068,32 @@ sed -i "/^rpl_semi_sync_/d" $MY_CNF ## Temporarily remove semi-replication varia
 echo "Initializing MySQL data directory..."
 if [ $MYSQL_VERSION -lt 50700 ]
 then
-    $BASE_DIR/scripts/mysql_install_db --defaults-file=$MY_CNF --basedir=$BASE_DIR --user=mysql &>/dev/null
+    $BASE_DIR/scripts/mysql_install_db --defaults-file=$MY_CNF --basedir=$BASE_DIR --user=mysql &>>$ERR_FILE
 else
-    $BASE_DIR/bin/mysqld --defaults-file=$MY_CNF --initialize-insecure --basedir=$BASE_DIR --user=mysql &>/dev/null
+    $BASE_DIR/bin/mysqld --defaults-file=$MY_CNF --initialize-insecure --basedir=$BASE_DIR --user=mysql &>>$ERR_FILE
 fi
 
 if [ $? -ne 0 ]
 then
     rm -rf $MY_CNF ## Clean up intermediate my.cnf to avoid misunderstanding
-    error_quit "Initializing MySQL data directory failed, please check MySQL error log for further troubelshooting"
+    error_quit "Initializing MySQL data directory failed, please check MySQL error log and $ERR_FILE for further troubelshooting"
 else
     echo "Initializing MySQL data directory succeed"
 fi
 rm -rf $MY_CNF ## Clean up intermediate my.cnf to avoid misunderstanding
+
+
+## Manually create SSL/RSA files for MySQL 5.7.9 ~ 5.7.27
+if [[ $MYSQL_VERSION -lt 50728 && $MYSQL_VERSION -gt 50700 ]]
+then
+    echo "Creating SSL/RSA files using mysql_ssl_rsa_setup"
+    $BASE_DIR/bin/mysql_ssl_rsa_setup --uid=mysql --datadir=$DATA_DIR/data &>>$ERR_FILE
+fi
+
+if [ $? -ne 0 ]
+then
+    echo "Call mysql_ssl_rsa_setup failed, please check $ERR_FILE for further troubelshooting"
+fi
 
 
 ## Startup mysqld process
@@ -1339,7 +1363,7 @@ then
         if [ `rpm -qa | grep -c percona-xtrabackup` -eq 0 ]
         then
             echo "Installing XtraBackup..."
-            yum install -y perl-DBI perl-DBD-MySQL rsync perl-Digest-MD5 &>/dev/null
+            yum install -y perl-DBI perl-DBD-MySQL rsync perl-Digest-MD5 &>>$ERR_FILE
             if [ $? -ne 0 ]
             then
                 echo "Install packeges from yum repository failed, please check your yum configuration first."
