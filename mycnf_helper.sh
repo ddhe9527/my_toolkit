@@ -26,9 +26,11 @@ NTP_FLAG=0
 AUTOSTART_FLAG=0
 SUPER_RO=0
 MASTER_IP_FLAG=0
+MASTER_PORT_FLAG=0
 OWN_IP_FLAG=0
 FAIL_FLAG=0
 INSTALL_TOOLS_FLAG=0
+
 
 ## -h option
 function usage()
@@ -44,7 +46,7 @@ Usage:
 -d: <string> MySQL initial data directory(default: /mysql_data)
 -f: <string> specify a my.cnf for MySQL Server setup(this file should have mycnf_helper fingerprint)
 -h:          print help information
--i: <number> server_id(default: random number between 0 and 32767)
+-i: <number> server_id(default: random number)
 -I: <number> IO capacity(IOPS) of the storage(default: 4000)
 -m: <number> memory capacity(unit: GB)
 -M: <number> use master-master replication and specify auto_increment_offset(1 or 2)
@@ -54,10 +56,10 @@ Usage:
 -r: <string> replication role, must be master or slave
 -s:          generate a my.cnf file and setup the MySQL Server
 -S:          use SSD storage(for innodb_flush_neighbors)
--t:          install tools: XtraBackup etc.
+-t:          install tools: XtraBackup, etc
 -v: <string> MySQL Server version(do not support RC version), eg: 5.6.51, 5.7.44, 8.0.39, 8.4.2, etc
 -x: <string> replication master IP address that will be used in "CHANGE MASTER TO" statement
--X: <number> replication master PORT that will be used in "CHANGE MASTER TO" statement
+-X: <number> replication master PORT that will be used in "CHANGE MASTER TO" statement(default: 3306)
 -y: <string> own IP address that will be used in reversed "CHANGE MASTER TO" statement to
              build master-master topology
 -z:          make mysqld autostart with the operation system
@@ -382,7 +384,7 @@ then
     echo "@type:common@0@999999@datadir = $DATA_DIR/data" >> $TMP_FILE
     echo "@type:common@0@999999@tmpdir = $DATA_DIR/tmp" >> $TMP_FILE
     echo "@type:common@0@999999@socket = $DATA_DIR/mysql.sock" >> $TMP_FILE
-    echo "@type:common@50715@999999@loose-mysqlx_socket = $DATA_DIR/mysqlx.sock" >> $TMP_FILE
+    echo "@type:common@80001@999999@loose-mysqlx_socket = $DATA_DIR/mysqlx.sock" >> $TMP_FILE
     echo "@type:common@0@999999@pid_file = $DATA_DIR/mysql.pid" >> $TMP_FILE
     echo "@type:common@0@999999@autocommit = ON" >> $TMP_FILE
     echo "@type:common@0@999999@character_set_server = utf8mb4" >> $TMP_FILE
@@ -1253,7 +1255,7 @@ then
             if [ $MYSQL_VERSION -ge 80400 ]
             then
                 $BASE_DIR/bin/mysql -uroot -p$ROOT_PASSWD -S$MYSQLD_SOCK -e "
-                CHANGE REPLICATION SOURCE TO SOURCE_HOST='$MASTER_IP',SOURCE_PORT=$MASTER_PORT,SOURCE_USER='repl',SOURCE_PASSWORD='$REPL_PASSWD',SOURCE_AUTO_POSITION=1;
+                CHANGE REPLICATION SOURCE TO SOURCE_HOST='$MASTER_IP',SOURCE_PORT=$MASTER_PORT,SOURCE_USER='repl',SOURCE_PASSWORD='$REPL_PASSWD',SOURCE_AUTO_POSITION=1,GET_SOURCE_PUBLIC_KEY=1;
                 START REPLICA;" &>/dev/null
             else
                 $BASE_DIR/bin/mysql -uroot -p$ROOT_PASSWD -S$MYSQLD_SOCK -e "
@@ -1327,7 +1329,7 @@ then
                 if [ $MYSQL_VERSION -ge 80400 ]
                 then
                     $BASE_DIR/bin/mysql -urepl -p$REPL_PASSWD -h$MASTER_IP -P$MASTER_PORT -e "
-                    CHANGE REPLICATION SOURCE TO SOURCE_HOST='$OWN_IP',SOURCE_PORT=$MY_PORT,SOURCE_USER='repl',SOURCE_PASSWORD='$REPL_PASSWD',SOURCE_AUTO_POSITION=1;
+                    CHANGE REPLICATION SOURCE TO SOURCE_HOST='$OWN_IP',SOURCE_PORT=$MY_PORT,SOURCE_USER='repl',SOURCE_PASSWORD='$REPL_PASSWD',SOURCE_AUTO_POSITION=1,GET_SOURCE_PUBLIC_KEY=1;
                     START REPLICA;" &>/dev/null
                 else
                     $BASE_DIR/bin/mysql -urepl -p$REPL_PASSWD -h$MASTER_IP -P$MASTER_PORT -e "
@@ -1361,7 +1363,7 @@ fi
 ## Configure mysqld as a service and enable autostart
 if [ $AUTOSTART_FLAG -eq 1 ]
 then
-    read -p "Enable autostarting will overwrite /etc/my.cnf and /etc/init.d/mysqld. Enter 'YES' if you want to do this: " CONTINUE_FLAG
+    read -p "Enable autostarting will overwrite /etc/my.cnf and /etc/init.d/mysqld. Enter "`tput setaf 1; tput bold; tput rev`'YES'`tput sgr0`" if you want to do this: " CONTINUE_FLAG
     if [[ `echo $CONTINUE_FLAG | tr [a-z] [A-Z]` = 'YES' ]]
     then
         if [ -f /etc/my.cnf ]
@@ -1424,9 +1426,16 @@ then
             systemctl enable mysqld
             systemctl start mysqld.service
             systemctl restart mysqld.service
-            systemctl status mysqld.service
         else
             error_quit "Only support OS major version 5 ~ 8"
+        fi
+
+        ## start slave after restarting mysqld service if necessary
+        if [ $MYSQL_VERSION -ge 80400 ]
+        then
+            $BASE_DIR/bin/mysql -uroot -p$ROOT_PASSWD -S$MYSQLD_SOCK -e "START REPLICA;" &>/dev/null
+        else
+            $BASE_DIR/bin/mysql -uroot -p$ROOT_PASSWD -S$MYSQLD_SOCK -e "START SLAVE;" &>/dev/null
         fi
     else
         echo "Operation canceled"
