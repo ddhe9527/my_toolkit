@@ -13,7 +13,7 @@ OLDEST_MYSQL_VERSION=50609
 SERVER_ID=$RANDOM$RANDOM        ##each random number is between 0 and 32767
 ROOT_PASSWD=Mycnf_helper123!    ##password for 'root'@'localhost' with ALL privilege
 REPL_PASSWD=Mycnf_helper456!    ##password for 'repl'@'%' with REPLICATION SLAVE and SUPER privilege
-WAIT_TIME=30                    ##Sleep time(second) before checking the mysqld process
+WAIT_TIME=30                    ##sleep time(second) before checking the mysqld process
 
 ## Flags(internal use)
 SETUP_FLAG=0
@@ -55,7 +55,7 @@ Usage:
 -s:          generate a my.cnf file and setup the MySQL Server
 -S:          use SSD storage(for innodb_flush_neighbors)
 -t:          install tools: XtraBackup etc.
--v: <string> MySQL Server version(do not support RC version), eg: 5.6.51, 5.7.44, 8.0.35, 8.1.0, 8.2.0
+-v: <string> MySQL Server version(do not support RC version), eg: 5.6.51, 5.7.44, 8.0.39, 8.4.2, etc
 -x: <string> replication master IP address that will be used in "CHANGE MASTER TO" statement
 -X: <number> replication master PORT that will be used in "CHANGE MASTER TO" statement
 -y: <string> own IP address that will be used in reversed "CHANGE MASTER TO" statement to
@@ -73,10 +73,26 @@ Theoretically supported MySQL versions:
     * 5.6.9 and above
 Currently known successfully tested MySQL versions:
     * 5.6.10
-    * 5.6.37
+    * 5.6.51
     * 5.7.25
-    * 5.7.29
+    * 5.7.44
     * 8.0.18
+    * 8.0.39
+    * 8.1.0
+    * 8.2.0
+    * 8.3.0
+    * 8.4.2
+    * 9.0.1
+
+Important Note:
+    * For the purpose of forward compatibility, this script uses "mysql_native_password" as default
+      authentication plugin at MySQL 8.3.x and prior. Although we have enabled "mysql_native_password"
+      explicitly at MySQL 8.4.0 ~ 8.4.x, but we strongly recommand migrating to "caching_sha2_password"
+      because of the removing of "mysql_native_password" at MySQL 9.0.0
+
+      https://dev.mysql.com/doc/relnotes/mysql/8.4/en/news-8-4-0.html#mysqld-8-4-0-deprecation-removal
+      https://dev.mysql.com/doc/relnotes/mysql/9.0/en/news-9-0-0.html#mysqld-9-0-0-deprecation-removal
+
 
 Example:
 1): Generate a my.cnf for MySQL 5.6.10 that will be running on particular server with following features:
@@ -414,7 +430,9 @@ then
     echo "@type:common@0@999999@myisam_sort_buffer_size = 32M" >> $TMP_FILE
     echo "@type:common@50622@50699@binlog_error_action = ABORT_SERVER" >> $TMP_FILE
     echo "@type:common@50706@999999@binlog_error_action = ABORT_SERVER" >> $TMP_FILE
-    echo "@type:common@50702@999999@default_authentication_plugin = mysql_native_password" >> $TMP_FILE
+    echo "@type:common@50702@80026@default_authentication_plugin = mysql_native_password" >> $TMP_FILE
+    echo "@type:common@80027@80399@authentication_policy = 'mysql_native_password,,'" >> $TMP_FILE    ## https://dev.mysql.com/doc/refman/8.0/en/server-system-variables.html#sysvar_authentication_policy
+    echo "@type:common@80400@80499@mysql_native_password = ON" >> $TMP_FILE                           ## https://dev.mysql.com/doc/refman/8.4/en/server-options.html#option_mysqld_mysql-native-password
     echo "@type:common@0@999999@innodb_file_per_table = ON" >> $TMP_FILE
     echo "@type:common@0@50799@innodb_file_format = Barracuda" >> $TMP_FILE
     echo "@type:common@0@50799@innodb_file_format_max = Barracuda" >> $TMP_FILE
@@ -842,17 +860,31 @@ fi
 
 ## Install necessary packages
 echo "Installing necessary packages..."
+if [ `getconf GNU_LIBC_VERSION | grep -c glibc` -eq 0 ]
+then
+    yum install -y glibc &>>$ERR_FILE
+fi
+
+if [ $? -eq 1 ]
+then
+    error_quit "Install glibc from yum repository failed, please check your yum configuration first"
+fi
+
+OS_GLIBC_VERSION=`getconf GNU_LIBC_VERSION | awk '{print $2}'`
+
 if [ $OS_VER_NUM -lt 8 ]
 then
-    yum install -y net-tools libaio libaio-devel numactl-libs ncurses-compat-libs numactl autoconf xz perl-Module* ntp &>>$ERR_FILE
+    yum install -y bc net-tools libaio libaio-devel numactl-libs ncurses-compat-libs numactl autoconf xz perl-Module* ntp &>>$ERR_FILE
 else
-    yum install -y net-tools libaio libaio-devel numactl-libs ncurses-compat-libs numactl autoconf xz perl-Module* &>>$ERR_FILE
+    yum install -y bc net-tools libaio libaio-devel numactl-libs ncurses-compat-libs numactl autoconf xz perl-Module* &>>$ERR_FILE
 fi
+
 if [ $? -eq 1 ]
 then
     error_quit "Install packeges from yum repository failed, please check your yum configuration first"
 fi
-echo "Finish installing necessary packages..."
+
+echo "Finish installing necessary packages, glibc version: "`tput setaf 1; tput bold; tput rev`$OS_GLIBC_VERSION`tput sgr0`
 
 
 ## Check network port if occupied
@@ -971,6 +1003,15 @@ fi
 if [ `ls -l | grep -c mysql-$SERVER_VERSION-linux-glibc` -eq 1 ]
 then
     MYSQL_PACKAGE=`ls | grep mysql-$SERVER_VERSION-linux-glibc`
+
+    ## Check glibc requirement
+    REQ_GLIBC_VERSION=`echo $MYSQL_PACKAGE | awk -F - '{print $4}'`
+    REQ_GLIBC_VERSION=${REQ_GLIBC_VERSION:5}
+    if [ `echo "$OS_GLIBC_VERSION >= $REQ_GLIBC_VERSION" | bc` -eq 0 ]
+    then
+        error_quit "$MYSQL_PACKAGE's requirement of glibc can not be satisfied(now we have glibc-$OS_GLIBC_VERSION), please try another MySQL archive package or upgrade glibc version"
+    fi
+
     MYSQL_PACKAGE=$PWD/$MYSQL_PACKAGE
     echo "Find $MYSQL_PACKAGE for installation"
 else
@@ -1161,13 +1202,26 @@ CREATE USER 'repl'@'%' IDENTIFIED BY '$REPL_PASSWD';
 GRANT REPLICATION SLAVE,SUPER ON *.* TO 'repl'@'%';
 FLUSH PRIVILEGES;
 DROP DATABASE IF EXISTS test;
-RESET MASTER;
 " &>/dev/null
 if [ $? -ne 0 ]
 then
     error_quit "Cleaning up anonymous database account, test database, and create replication account failed"
 fi
 echo "Postinstallation: replication database account 'repl'@'%' has been created, password: "`tput setaf 1; tput bold; tput rev`$REPL_PASSWD`tput sgr0`
+
+
+## Postinstallation: reset master
+## https://dev.mysql.com/doc/refman/8.4/en/reset-binary-logs-and-gtids.html
+if [ $MYSQL_VERSION -ge 80400 ]
+then
+    $BASE_DIR/bin/mysql -uroot -p$ROOT_PASSWD -S$MYSQLD_SOCK -e "RESET BINARY LOGS AND GTIDS;" &>/dev/null
+else
+    $BASE_DIR/bin/mysql -uroot -p$ROOT_PASSWD -S$MYSQLD_SOCK -e "RESET MASTER;" &>/dev/null
+fi
+if [ $? -ne 0 ]
+then
+    error_quit "Reset master failed"
+fi
 
 
 ## Establish replication relationship
@@ -1188,13 +1242,25 @@ then
                 FAIL_FLAG=1
             fi
         fi
+
         ## Execute "CHANGE MASTER TO" statement on current mysqld
+        ## https://dev.mysql.com/doc/refman/8.4/en/change-replication-source-to.html
+        ## https://dev.mysql.com/doc/refman/8.4/en/start-replica.html
         if [ $FAIL_FLAG -eq 0 ]
         then
             echo "Establishing one-way replication relationship by executing 'CHANGE MASTER TO' statement"
-            $BASE_DIR/bin/mysql -uroot -p$ROOT_PASSWD -S$MYSQLD_SOCK -e "
-            CHANGE MASTER TO MASTER_HOST='$MASTER_IP',MASTER_PORT=$MASTER_PORT,MASTER_USER='repl',MASTER_PASSWORD='$REPL_PASSWD',MASTER_AUTO_POSITION=1;
-            START SLAVE;"  &>/dev/null
+
+            if [ $MYSQL_VERSION -ge 80400 ]
+            then
+                $BASE_DIR/bin/mysql -uroot -p$ROOT_PASSWD -S$MYSQLD_SOCK -e "
+                CHANGE REPLICATION SOURCE TO SOURCE_HOST='$MASTER_IP',SOURCE_PORT=$MASTER_PORT,SOURCE_USER='repl',SOURCE_PASSWORD='$REPL_PASSWD',SOURCE_AUTO_POSITION=1;
+                START REPLICA;" &>/dev/null
+            else
+                $BASE_DIR/bin/mysql -uroot -p$ROOT_PASSWD -S$MYSQLD_SOCK -e "
+                CHANGE MASTER TO MASTER_HOST='$MASTER_IP',MASTER_PORT=$MASTER_PORT,MASTER_USER='repl',MASTER_PASSWORD='$REPL_PASSWD',MASTER_AUTO_POSITION=1;
+                START SLAVE;" &>/dev/null
+            fi
+
             if [ $? -ne 0 ]
             then
                 echo "Establishing one-way replication relationship failed"
@@ -1203,6 +1269,7 @@ then
                 echo "Establishing one-way replication relationship succeed"
             fi
         fi
+
         ## Establish reversed replication relationship for master-master topology
         if [[ $OWN_IP_FLAG -eq 1 && $MM_FLAG -eq 1 && $FAIL_FLAG -eq 0 ]]
         then
@@ -1225,6 +1292,7 @@ then
                 echo "Getting other side's event_scheduler failed, master-master replication will not be established"
                 FAIL_FLAG=1
             fi
+
             ## Check auto_increment_offset, auto_increment_increment and event_scheduler variables
             if [ $FAIL_FLAG -eq 0 ]
             then
@@ -1250,12 +1318,23 @@ then
                     FAIL_FLAG=1
                 fi
             fi
+
             ## Execute "CHANGE MASTER TO" statement on remote mysqld
+            ## https://dev.mysql.com/doc/refman/8.4/en/change-replication-source-to.html
+            ## https://dev.mysql.com/doc/refman/8.4/en/start-replica.html
             if  [ $FAIL_FLAG -eq 0 ]
             then
-                $BASE_DIR/bin/mysql -urepl -p$REPL_PASSWD -h$MASTER_IP -P$MASTER_PORT -e "
-                CHANGE MASTER TO MASTER_HOST='$OWN_IP',MASTER_PORT=$MY_PORT,MASTER_USER='repl',MASTER_PASSWORD='$REPL_PASSWD',MASTER_AUTO_POSITION=1;
-                START SLAVE;"  &>/dev/null
+                if [ $MYSQL_VERSION -ge 80400 ]
+                then
+                    $BASE_DIR/bin/mysql -urepl -p$REPL_PASSWD -h$MASTER_IP -P$MASTER_PORT -e "
+                    CHANGE REPLICATION SOURCE TO SOURCE_HOST='$OWN_IP',SOURCE_PORT=$MY_PORT,SOURCE_USER='repl',SOURCE_PASSWORD='$REPL_PASSWD',SOURCE_AUTO_POSITION=1;
+                    START REPLICA;" &>/dev/null
+                else
+                    $BASE_DIR/bin/mysql -urepl -p$REPL_PASSWD -h$MASTER_IP -P$MASTER_PORT -e "
+                    CHANGE MASTER TO MASTER_HOST='$OWN_IP',MASTER_PORT=$MY_PORT,MASTER_USER='repl',MASTER_PASSWORD='$REPL_PASSWD',MASTER_AUTO_POSITION=1;
+                    START SLAVE;" &>/dev/null
+                fi
+
                 if [ $? -ne 0 ]
                 then
                     echo "Establishing master-master replication relationship failed"
@@ -1335,6 +1414,7 @@ then
             chkconfig --del mysqld
             chkconfig --add mysqld
             chkconfig mysqld on
+            service mysqld stop
             service mysqld start
             service mysqld status
         elif [[ $OS_VER_NUM -ge 7 && $OS_VER_NUM -lt 9 ]]    ##for RHEL/CentOS 7,8
@@ -1343,6 +1423,7 @@ then
             systemctl disable mysqld
             systemctl enable mysqld
             systemctl start mysqld.service
+            systemctl restart mysqld.service
             systemctl status mysqld.service
         else
             error_quit "Only support OS major version 5 ~ 8"
@@ -1426,4 +1507,3 @@ fi
 
 
 echo `tput bold`"Everything succeed !!!"`tput sgr0`
-
