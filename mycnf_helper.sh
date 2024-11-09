@@ -441,6 +441,7 @@ then
     echo "@type:common@50603@50799@innodb_large_prefix = ON" >> $TMP_FILE
     echo "@type:common@0@999999@innodb_flush_log_at_trx_commit = 1" >> $TMP_FILE
     echo "@type:common@50602@999999@innodb_stats_persistent_sample_pages = 128" >> $TMP_FILE
+    echo "@type:common@50605@50699@eq_range_index_dive_limit = 200" >> $TMP_FILE
     ##innodb_buffer_pool_size
     let BUFFER_POOL=$MEM_CAP*1024*7/10
     BPL=${#BUFFER_POOL}
