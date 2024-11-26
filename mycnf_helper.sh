@@ -142,7 +142,7 @@ Enjoy and free to use at your own risk~'
 
 ## Print error message with red color font, then quit with code 1
 function error_quit(){
-    echo `tput setaf 1; tput bold`"Error: "$1`tput sgr0`
+    echo `tput setaf 1; tput bold`"Error: "$1`tput sgr0` >&2
     exit 1
 }
 
