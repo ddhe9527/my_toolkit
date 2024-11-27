@@ -13,9 +13,9 @@ AUTH_KEY=2c605673c860f21f94cd26cb390bf671
 CLUSTER_KEY=tdsql_sk3fozaph
 
 
-## instance metrics(7)
+## instance metrics(10)
 MKEY_LIST_01=("status" "degrade_flag" "mysql_master_switch" "mtime" "rstate" "instance_name" \
-              "clientName")
+              "clientName" "available_proxy_host" "cluster_type" "groupname")
 
 ## txsql metrics(30)
 MKEY_LIST_02=("alive" "is_restart" "backup_monitor_binlog" "backup_monitor_xtrabckup" \
