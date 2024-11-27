@@ -17,13 +17,13 @@ CLUSTER_KEY=tdsql_sk3fozaph
 MKEY_LIST_01=("status" "degrade_flag" "mysql_master_switch" "mtime" "rstate" "instance_name" \
               "clientName")
 
-## txsql metrics(29)
+## txsql metrics(30)
 MKEY_LIST_02=("alive" "is_restart" "backup_monitor_binlog" "backup_monitor_xtrabckup" \
             "binlog_dir_usage" "data_dir_usage" "connect_usage" "conn_active" \
             "conn_err_save" "cpu_usage" "mem_usage" "io_usage" "iodelay" "process_fh_max" \
             "process_fh_usage" "active_thread_count" "waiting_thread_count" "processlist_slow_sql" \
             "slow_query_rate" "slave_delay" "slave_io_running" "slave_sql_running" "ismaster" \
-            "sqlasyn_state" "gtidIsSame" "mtime" "rstate" "cluster_name" "rstate")
+            "sqlasyn_state" "gtidIsSame" "mtime" "rstate" "cluster_name" "rstate" "set_name")
 
 ## proxy metrics(7)
 MKEY_LIST_03=("alive" "conn_usage" "proxy_is_restart" "proxy_cpu_usage" "mtime" "rstate" "cluster_name")
