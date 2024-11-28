@@ -13,27 +13,33 @@ AUTH_KEY=2c605673c860f21f94cd26cb390bf671
 CLUSTER_KEY=tdsql_sk3fozaph
 
 
-## instance metrics(16)
+## instance metrics(19)
 MKEY_LIST_01=("status" "degrade_flag" "mysql_master_switch" "mtime" "rstate" "instance_name" \
               "clientName" "cluster_type" "groupname" "master_ip_port" "mysql_sum_alive" \
-              "oss_cpu" "oss_data_disk" "oss_log_disk" "oss_memory" "oss_proxy_port")
+              "oss_cpu" "oss_data_disk" "oss_log_disk" "oss_memory" "oss_proxy_port" "cluster_model" \
+              "mysql_sum_slave_io_running" "mysql_sum_slave_sql_running")
 
-## txsql metrics(30)
+## txsql metrics(41)
 MKEY_LIST_02=("alive" "is_restart" "backup_monitor_binlog" "backup_monitor_xtrabckup" \
             "binlog_dir_usage" "data_dir_usage" "connect_usage" "conn_active" \
             "conn_err_save" "cpu_usage" "mem_usage" "io_usage" "iodelay" "process_fh_max" \
             "process_fh_usage" "active_thread_count" "waiting_thread_count" "processlist_slow_sql" \
             "slow_query_rate" "slave_delay" "slave_io_running" "slave_sql_running" "ismaster" \
-            "sqlasyn_state" "gtidIsSame" "mtime" "rstate" "cluster_name" "rstate" "set_name")
+            "sqlasyn_state" "gtidIsSame" "mtime" "rstate" "cluster_name" "set_name" "conn_max" \
+            "binlog_dir_total" "binlog_dir_used" "conn_total" "data_dir_total" "data_dir_used" \
+            "mem_total" "mem_used" "process_fh_used" "QPS" "slave_io_error" "slave_sql_error")
 
-## proxy metrics(7)
-MKEY_LIST_03=("alive" "conn_usage" "proxy_is_restart" "proxy_cpu_usage" "mtime" "rstate" "cluster_name")
+## proxy metrics(15)
+MKEY_LIST_03=("alive" "conn_usage" "proxy_is_restart" "proxy_cpu_usage" "mtime" "rstate" "cluster_name" \
+              "connect_count" "connect_max" "fail_connect_client" "fail_connect_server" "ioping" "Rss" \
+              "TPS" "number_of_confused_2pc_tx")
 
-## zookeeper metrics(3)
-MKEY_LIST_04=("alive" "zk_avg_latency" "mtime")
+## zookeeper metrics(10)
+MKEY_LIST_04=("alive" "zk_avg_latency" "mtime" "master_switch" "Mode" "zk_num_alive_connections" \
+              "zk_pending_syncs" "zk_outstanding_requests" "zk_watch_count" "zk_znode_count")
 
-## scheduler metrics(2)
-MKEY_LIST_11=("checkheartbeat" "mtime")
+## scheduler metrics(4)
+MKEY_LIST_11=("checkheartbeat" "mtime" "scheduler_distance_id" "scheduler_alive")
 
 ## online ddl metrics(2)
 MKEY_LIST_21=("alive" "mtime")
