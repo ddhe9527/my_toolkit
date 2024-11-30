@@ -3,7 +3,7 @@
 
 ##############################################################
 ##  E-mail: heduoduo321@163.com                             ##
-##    Date: 2024-11-27                                      ##
+##    Date: 2024-11-30                                      ##
 ##    Info: TDSQL monitoring script for Zabbix integration  ##
 ##############################################################
 
@@ -53,14 +53,13 @@ ITEM_NAME=""
 JQ_STR=""
 
 BASE_DIR=/tmp
-WHITELIST_FILE=$BASE_DIR'/tdsql_monitor_whitelist.log'
-MAP_FILE=$BASE_DIR'/tdsql_monitor_maplist.log'
-MKEY_LIST_1_FILE=$BASE_DIR'/tdsql_monitor_file01.log'
-MKEY_LIST_2_FILE=$BASE_DIR'/tdsql_monitor_file02.log'
-MKEY_LIST_3_FILE=$BASE_DIR'/tdsql_monitor_file03.log'
-MKEY_LIST_4_FILE=$BASE_DIR'/tdsql_monitor_file04.log'
-MKEY_LIST_11_FILE=$BASE_DIR'/tdsql_monitor_file11.log'
-MKEY_LIST_21_FILE=$BASE_DIR'/tdsql_monitor_file21.log'
+WHITELIST_FILE=$BASE_DIR'/tdsql_monitor_whitelist.json'
+MKEY_LIST_1_FILE=$BASE_DIR'/tdsql_monitor_file01.json'
+MKEY_LIST_2_FILE=$BASE_DIR'/tdsql_monitor_file02.json'
+MKEY_LIST_3_FILE=$BASE_DIR'/tdsql_monitor_file03.json'
+MKEY_LIST_4_FILE=$BASE_DIR'/tdsql_monitor_file04.json'
+MKEY_LIST_11_FILE=$BASE_DIR'/tdsql_monitor_file11.json'
+MKEY_LIST_21_FILE=$BASE_DIR'/tdsql_monitor_file21.json'
 
 
 
@@ -181,7 +180,7 @@ then
     echo "$JSON_STR" >$MKEY_LIST_1_FILE
 
 
-    ## generate TDSQL instance whitelist file
+    ## generate TDSQL instance whitelist and print it
     BLACKLIST=""
     if [ `cat $MKEY_LIST_1_FILE | wc -L` -gt 0 ]
     then
@@ -204,45 +203,9 @@ then
             fi
         done
 
-        cat $MKEY_LIST_1_FILE | jq ".data[] | select($JQ_STR) | .mid" | sort | uniq >$WHITELIST_FILE
+        echo '{"data":['`cat $MKEY_LIST_1_FILE | jq ".data[] | select($JQ_STR) | select(.mkey == \"instance_name\") | {\"{#INSTANCE_NAME}\":.mid,\"{#DESC}\":.mval}" | sed "s/}$/},/g" | head -n -1`'}]}' | tee $WHITELIST_FILE
     else
-        cat $MKEY_LIST_1_FILE | jq '.data[] | .mid' | sort | uniq >$WHITELIST_FILE
-    fi
-
-
-    ## print JSON string(old implementation) 
-    ##if [ -e $WHITELIST_FILE ] && [ `cat $WHITELIST_FILE | wc -l` -gt 0 ]
-    ##then
-    ##    IDX=0
-    ##    CNT=`cat $WHITELIST_FILE | wc -l`
-    ##    echo '{"data":['
-    ##    for i in `cat $WHITELIST_FILE`
-    ##    do
-    ##        echo -n '{"{#INSTANCE_NAME}":'$i'}'
-    ##        IDX=`expr $IDX + 1`
-    ##        if [ $IDX -lt $CNT ]
-    ##        then
-    ##            echo ','
-    ##        fi
-    ##    done
-    ##    echo ']}'
-    ##fi
-
-    ## print JSON string
-    if [ -e $WHITELIST_FILE ] && [ `cat $WHITELIST_FILE | wc -l` -gt 0 ]
-    then
-        JQ_STR=""
-        for i in `cat $WHITELIST_FILE`
-        do
-            if [ "$JQ_STR" == "" ]
-            then
-               JQ_STR="(.mid == $i)"
-            else
-                JQ_STR=$JQ_STR" or (.mid == $i)"
-            fi
-        done
-
-        echo '{"data":['`cat $MKEY_LIST_1_FILE | jq ".data[] | select($JQ_STR) | select(.mkey == \"instance_name\") | {\"{#INSTANCE_NAME}\":.mid,\"{#DESC}\":.mval}" | sed "s/}$/},/g" | head -n -1`'}]}' | tee $MAP_FILE
+        echo '{"data":['`cat $MKEY_LIST_1_FILE | jq ".data[] | select(.mkey == \"instance_name\") | {\"{#INSTANCE_NAME}\":.mid,\"{#DESC}\":.mval}" | sed "s/}$/},/g" | head -n -1`'}]}' | tee $WHITELIST_FILE
     fi
 
     exit 0
@@ -255,9 +218,9 @@ if [ $DISCOVERY_FLAG -eq 1 ] && [ $MTYPE_NUM -eq 2 ]
 then
     ## get 'mtype=2' metrics via curl
     PMIDLIST=""
-    if [ -e $WHITELIST_FILE ] && [ `cat $WHITELIST_FILE | wc -l` -gt 0 ]
+    if [ -e $WHITELIST_FILE ] && [ `cat $WHITELIST_FILE | wc -L` -gt 0 ]
     then
-        for i in `cat $WHITELIST_FILE`
+        for i in `cat $WHITELIST_FILE | jq '.data[] | ."{#INSTANCE_NAME}"'`
         do
             if [ "$PMIDLIST" == "" ]
             then
@@ -296,7 +259,7 @@ then
 
     ## generate txsql instance whitelist
     JQ_STR=""
-    for i in `cat $WHITELIST_FILE`
+    for i in `cat $WHITELIST_FILE | jq '.data[] | ."{#INSTANCE_NAME}"'`
     do
         if [ "$JQ_STR" == "" ]
         then
@@ -319,11 +282,16 @@ then
     if [ `echo "$WHITELIST" | wc -l` -gt 0 ]
     then
         IDX=0
+        DESC=""
+        INSTANCE_NAME=""
         CNT=`echo "$WHITELIST" | wc -l`
         echo '{"data":['
         for i in `echo "$WHITELIST"`
         do
-            echo -n '{"{#TXSQL_NAME}":'$i'}'
+            INSTANCE_NAME=`cat $MKEY_LIST_2_FILE | jq ".data[] | select ($JQ_STR) |select((.mid == $i) and (.mkey == \"cluster_name\")) | .mval"`
+            DESC=`cat $WHITELIST_FILE | jq ".data[] | select(.\"{#INSTANCE_NAME}\" == $INSTANCE_NAME) | .\"{#DESC}\""`
+            echo -n '{"{#TXSQL_NAME}":'$i','
+            echo -n '"{#DESC}":'$DESC'}'
             IDX=`expr $IDX + 1`
             if [ $IDX -lt $CNT ]
             then
@@ -343,9 +311,9 @@ if [ $DISCOVERY_FLAG -eq 1 ] && [ $MTYPE_NUM -eq 3 ]
 then
     ## get 'mtype=3' metrics via curl
     PMIDLIST=""
-    if [ -e $WHITELIST_FILE ] && [ `cat $WHITELIST_FILE | wc -l` -gt 0 ]
+    if [ -e $WHITELIST_FILE ] && [ `cat $WHITELIST_FILE | wc -L` -gt 0 ]
     then
-        for i in `cat $WHITELIST_FILE`
+        for i in `cat $WHITELIST_FILE | jq '.data[] | ."{#INSTANCE_NAME}"'`
         do
             if [ "$PMIDLIST" == "" ]
             then
@@ -384,7 +352,7 @@ then
 
     ## generate proxy instance whitelist
     JQ_STR=""
-    for i in `cat $WHITELIST_FILE`
+    for i in `cat $WHITELIST_FILE | jq '.data[] | ."{#INSTANCE_NAME}"'`
     do
         if [ "$JQ_STR" == "" ]
         then
@@ -407,11 +375,16 @@ then
     if [ `echo "$WHITELIST" | wc -l` -gt 0 ]
     then
         IDX=0
+        DESC=""
+        INSTANCE_NAME=""
         CNT=`echo "$WHITELIST" | wc -l`
         echo '{"data":['
         for i in `echo "$WHITELIST"`
         do
-            echo -n '{"{#PROXY_NAME}":'$i'}'
+            INSTANCE_NAME=`cat $MKEY_LIST_3_FILE | jq ".data[] | select ($JQ_STR) | select((.mid == $i) and (.mkey == \"cluster_name\")) | .mval"`
+            DESC=`cat $WHITELIST_FILE | jq ".data[] | select(.\"{#INSTANCE_NAME}\" == $INSTANCE_NAME) | .\"{#DESC}\""`
+            echo -n '{"{#PROXY_NAME}":'$i','
+            echo -n '"{#DESC}":'$DESC'}'
             IDX=`expr $IDX + 1`
             if [ $IDX -lt $CNT ]
             then
