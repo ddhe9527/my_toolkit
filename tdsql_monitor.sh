@@ -54,6 +54,7 @@ JQ_STR=""
 
 BASE_DIR=/tmp
 WHITELIST_FILE=$BASE_DIR'/tdsql_monitor_whitelist.log'
+MAP_FILE=$BASE_DIR'/tdsql_monitor_maplist.log'
 MKEY_LIST_1_FILE=$BASE_DIR'/tdsql_monitor_file01.log'
 MKEY_LIST_2_FILE=$BASE_DIR'/tdsql_monitor_file02.log'
 MKEY_LIST_3_FILE=$BASE_DIR'/tdsql_monitor_file03.log'
@@ -209,22 +210,39 @@ then
     fi
 
 
+    ## print JSON string(old implementation) 
+    ##if [ -e $WHITELIST_FILE ] && [ `cat $WHITELIST_FILE | wc -l` -gt 0 ]
+    ##then
+    ##    IDX=0
+    ##    CNT=`cat $WHITELIST_FILE | wc -l`
+    ##    echo '{"data":['
+    ##    for i in `cat $WHITELIST_FILE`
+    ##    do
+    ##        echo -n '{"{#INSTANCE_NAME}":'$i'}'
+    ##        IDX=`expr $IDX + 1`
+    ##        if [ $IDX -lt $CNT ]
+    ##        then
+    ##            echo ','
+    ##        fi
+    ##    done
+    ##    echo ']}'
+    ##fi
+
     ## print JSON string
     if [ -e $WHITELIST_FILE ] && [ `cat $WHITELIST_FILE | wc -l` -gt 0 ]
     then
-        IDX=0
-        CNT=`cat $WHITELIST_FILE | wc -l`
-        echo '{"data":['
+        JQ_STR=""
         for i in `cat $WHITELIST_FILE`
         do
-            echo -n '{"{#INSTANCE_NAME}":'$i'}'
-            IDX=`expr $IDX + 1`
-            if [ $IDX -lt $CNT ]
+            if [ "$JQ_STR" == "" ]
             then
-                echo ','
+               JQ_STR="(.mid == $i)"
+            else
+                JQ_STR=$JQ_STR" or (.mid == $i)"
             fi
         done
-        echo ']}'
+
+        echo '{"data":['`cat $MKEY_LIST_1_FILE | jq ".data[] | select($JQ_STR) | select(.mkey == \"instance_name\") | {\"{#INSTANCE_NAME}\":.mid,\"{#DESC}\":.mval}" | sed "s/}$/},/g" | head -n -1`'}]}' | tee $MAP_FILE
     fi
 
     exit 0
