@@ -20,7 +20,7 @@ MKEY_LIST_01=("status" "degrade_flag" "mysql_master_switch" "mtime" "rstate" "in
               "mysql_sum_slave_io_running" "mysql_sum_slave_sql_running")
 
 ## txsql metrics(41)
-MKEY_LIST_02=("alive" "is_restart" "backup_monitor_binlog" "backup_monitor_xtrabckup" \
+MKEY_LIST_02=("alive" "is_notsame" "backup_monitor_binlog" "backup_monitor_xtrabckup" \
             "binlog_dir_usage" "data_dir_usage" "connect_usage" "conn_active" \
             "conn_err_save" "cpu_usage" "mem_usage" "io_usage" "iodelay" "process_fh_max" \
             "process_fh_usage" "active_thread_count" "waiting_thread_count" "processlist_slow_sql" \
