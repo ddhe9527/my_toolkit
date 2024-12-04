@@ -1,0 +1,1215 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<zabbix_export>
+    <version>6.4</version>
+    <template_groups>
+        <template_group>
+            <uuid>748ad4d098d447d492bb935c907f652f</uuid>
+            <name>Templates/Databases</name>
+        </template_group>
+    </template_groups>
+    <templates>
+        <template>
+            <uuid>de5986ff738d479395d65e953137a52e</uuid>
+            <template>fm_tdsql</template>
+            <name>fm_tdsql</name>
+            <groups>
+                <group>
+                    <name>Templates/Databases</name>
+                </group>
+            </groups>
+            <discovery_rules>
+                <discovery_rule>
+                    <uuid>5f73a7e80e19422385d752a5e06edfca</uuid>
+                    <name>instance_discovery</name>
+                    <key>tdsql.discovery[1]</key>
+                    <delay>33s</delay>
+                    <lifetime>7d</lifetime>
+                    <item_prototypes>
+                        <item_prototype>
+                            <uuid>9b145288f73f4684aa13a2b64272dfc5</uuid>
+                            <name>{#DESC}{#INSTANCE_NAME}(instance clientName)</name>
+                            <key>tdsql.get_value[1,{#INSTANCE_NAME},clientName]</key>
+                            <delay>1d</delay>
+                            <history>7d</history>
+                            <trends>0</trends>
+                            <discover>NO_DISCOVER</discover>
+                            <value_type>TEXT</value_type>
+                            <description>业务描述</description>
+                        </item_prototype>
+                        <item_prototype>
+                            <uuid>6406f608d640421cabf353efe8cf7a70</uuid>
+                            <name>{#DESC}{#INSTANCE_NAME}(instance cluster_model)</name>
+                            <key>tdsql.get_value[1,{#INSTANCE_NAME},cluster_model]</key>
+                            <delay>1d</delay>
+                            <history>7d</history>
+                            <trends>0</trends>
+                            <discover>NO_DISCOVER</discover>
+                            <value_type>TEXT</value_type>
+                            <description>容灾模式</description>
+                        </item_prototype>
+                        <item_prototype>
+                            <uuid>03e34439c95246c387d8958448f6af13</uuid>
+                            <name>{#DESC}{#INSTANCE_NAME}(instance cluster_type)</name>
+                            <key>tdsql.get_value[1,{#INSTANCE_NAME},cluster_type]</key>
+                            <delay>1d</delay>
+                            <history>7d</history>
+                            <trends>0</trends>
+                            <discover>NO_DISCOVER</discover>
+                            <value_type>TEXT</value_type>
+                            <description>实例类型，集中式为noshard，分布式为groupshard</description>
+                        </item_prototype>
+                        <item_prototype>
+                            <uuid>64bc942910214d328f160d62c90d07f1</uuid>
+                            <name>{#DESC}{#INSTANCE_NAME}(instance degrade_flag)</name>
+                            <key>tdsql.get_value[1,{#INSTANCE_NAME},degrade_flag]</key>
+                            <delay>30s</delay>
+                            <value_type>FLOAT</value_type>
+                            <description>强同步降级标识</description>
+                            <trigger_prototypes>
+                                <trigger_prototype>
+                                    <uuid>980324535f524304b83e57547edf9335</uuid>
+                                    <expression>count(/fm_tdsql/tdsql.get_value[1,{#INSTANCE_NAME},degrade_flag],30m,&quot;ne&quot;,0) &gt; 0</expression>
+                                    <name>TDSQL{#DESC} instance({#INSTANCE_NAME})发生强同步退化</name>
+                                    <priority>INFO</priority>
+                                </trigger_prototype>
+                            </trigger_prototypes>
+                        </item_prototype>
+                        <item_prototype>
+                            <uuid>5f70c96afa7243c080c1a568dba6c1d8</uuid>
+                            <name>{#DESC}{#INSTANCE_NAME}(instance groupname)</name>
+                            <key>tdsql.get_value[1,{#INSTANCE_NAME},groupname]</key>
+                            <delay>1d</delay>
+                            <history>7d</history>
+                            <trends>0</trends>
+                            <discover>NO_DISCOVER</discover>
+                            <value_type>TEXT</value_type>
+                            <description>分布式实例的group名称</description>
+                        </item_prototype>
+                        <item_prototype>
+                            <uuid>d1dc19cf1db248888574799de70894da</uuid>
+                            <name>{#DESC}{#INSTANCE_NAME}(instance instance_name)</name>
+                            <key>tdsql.get_value[1,{#INSTANCE_NAME},instance_name]</key>
+                            <delay>1d</delay>
+                            <history>7d</history>
+                            <trends>0</trends>
+                            <value_type>TEXT</value_type>
+                            <description>实例名称</description>
+                        </item_prototype>
+                        <item_prototype>
+                            <uuid>1d5a5151bf79459992118617cfa614b8</uuid>
+                            <name>{#DESC}{#INSTANCE_NAME}(instance master_ip_port)</name>
+                            <key>tdsql.get_value[1,{#INSTANCE_NAME},master_ip_port]</key>
+                            <delay>1d</delay>
+                            <history>7d</history>
+                            <trends>0</trends>
+                            <discover>NO_DISCOVER</discover>
+                            <value_type>TEXT</value_type>
+                            <description>主库IP:PORT</description>
+                        </item_prototype>
+                        <item_prototype>
+                            <uuid>0fa932c755694768ab85e9b3644205f4</uuid>
+                            <name>{#DESC}{#INSTANCE_NAME}(instance mtime)</name>
+                            <key>tdsql.get_value[1,{#INSTANCE_NAME},mtime]</key>
+                            <delay>3m</delay>
+                            <history>7d</history>
+                            <units>timestamp</units>
+                            <description>监控指标上报时间</description>
+                            <trigger_prototypes>
+                                <trigger_prototype>
+                                    <uuid>ae4da8025d864c87b702fb28b0ca814d</uuid>
+                                    <expression>now() - last(/fm_tdsql/tdsql.get_value[1,{#INSTANCE_NAME},mtime]) &gt; 600</expression>
+                                    <name>TDSQL{#DESC} instance({#INSTANCE_NAME})监控指标上报延迟</name>
+                                    <priority>INFO</priority>
+                                </trigger_prototype>
+                            </trigger_prototypes>
+                        </item_prototype>
+                        <item_prototype>
+                            <uuid>d02b4d44ccde40958fd40fb4a4c73ed0</uuid>
+                            <name>{#DESC}{#INSTANCE_NAME}(instance mysql_master_switch)</name>
+                            <key>tdsql.get_value[1,{#INSTANCE_NAME},mysql_master_switch]</key>
+                            <delay>30s</delay>
+                            <value_type>FLOAT</value_type>
+                            <description>1分钟内发生过主从切换的标识</description>
+                            <trigger_prototypes>
+                                <trigger_prototype>
+                                    <uuid>695337c2d90444ab968a65dcedf87734</uuid>
+                                    <expression>count(/fm_tdsql/tdsql.get_value[1,{#INSTANCE_NAME},mysql_master_switch],10m,&quot;ne&quot;,0) &gt; 0</expression>
+                                    <name>TDSQL{#DESC} instance({#INSTANCE_NAME})发生主从切换</name>
+                                    <priority>INFO</priority>
+                                </trigger_prototype>
+                            </trigger_prototypes>
+                        </item_prototype>
+                        <item_prototype>
+                            <uuid>991ab0a98f9d446caa12f87275634dfe</uuid>
+                            <name>{#DESC}{#INSTANCE_NAME}(instance mysql_sum_alive)</name>
+                            <key>tdsql.get_value[1,{#INSTANCE_NAME},mysql_sum_alive]</key>
+                            <delay>30s</delay>
+                            <value_type>FLOAT</value_type>
+                            <description>所有存活txsql实例数量总和，0表示全部存活</description>
+                            <trigger_prototypes>
+                                <trigger_prototype>
+                                    <uuid>ea2c4715021c48ac8cab182e0f84a5ef</uuid>
+                                    <expression>count(/fm_tdsql/tdsql.get_value[1,{#INSTANCE_NAME},mysql_sum_alive],5m,&quot;ne&quot;,0) &gt; 0</expression>
+                                    <name>TDSQL{#DESC} instance({#INSTANCE_NAME})存在&quot;not alive&quot;状态txsql</name>
+                                    <priority>INFO</priority>
+                                </trigger_prototype>
+                            </trigger_prototypes>
+                        </item_prototype>
+                        <item_prototype>
+                            <uuid>9eaadf8929844073a256145d4108bdd5</uuid>
+                            <name>{#DESC}{#INSTANCE_NAME}(instance mysql_sum_slave_io_running)</name>
+                            <key>tdsql.get_value[1,{#INSTANCE_NAME},mysql_sum_slave_io_running]</key>
+                            <delay>30s</delay>
+                            <history>7d</history>
+                            <discover>NO_DISCOVER</discover>
+                            <description>所有txsql主从复制IO线程数量总和</description>
+                        </item_prototype>
+                        <item_prototype>
+                            <uuid>79f96e28c3b245878de1f5c87b7854d3</uuid>
+                            <name>{#DESC}{#INSTANCE_NAME}(instance mysql_sum_slave_sql_running)</name>
+                            <key>tdsql.get_value[1,{#INSTANCE_NAME},mysql_sum_slave_sql_running]</key>
+                            <delay>30s</delay>
+                            <history>7d</history>
+                            <discover>NO_DISCOVER</discover>
+                            <description>所有txsql主从复制SQL线程数量总和</description>
+                        </item_prototype>
+                        <item_prototype>
+                            <uuid>42d3b561af0b4ea9be843f67e5b3ce5f</uuid>
+                            <name>{#DESC}{#INSTANCE_NAME}(instance oss_cpu)</name>
+                            <key>tdsql.get_value[1,{#INSTANCE_NAME},oss_cpu]</key>
+                            <delay>1d</delay>
+                            <history>7d</history>
+                            <discover>NO_DISCOVER</discover>
+                            <units>%</units>
+                            <description>分配的CPU数量</description>
+                        </item_prototype>
+                        <item_prototype>
+                            <uuid>c3d0f7e8b7f44924b08f56205b74c0d1</uuid>
+                            <name>{#DESC}{#INSTANCE_NAME}(instance oss_data_disk)</name>
+                            <key>tdsql.get_value[1,{#INSTANCE_NAME},oss_data_disk]</key>
+                            <delay>1d</delay>
+                            <history>7d</history>
+                            <discover>NO_DISCOVER</discover>
+                            <units>MB</units>
+                            <description>分配的数据盘大小</description>
+                        </item_prototype>
+                        <item_prototype>
+                            <uuid>50ecb5ee2d2e4becadb703395e0e5685</uuid>
+                            <name>{#DESC}{#INSTANCE_NAME}(instance oss_log_disk)</name>
+                            <key>tdsql.get_value[1,{#INSTANCE_NAME},oss_log_disk]</key>
+                            <delay>1d</delay>
+                            <history>7d</history>
+                            <discover>NO_DISCOVER</discover>
+                            <units>MB</units>
+                            <description>分配的日志盘大小</description>
+                        </item_prototype>
+                        <item_prototype>
+                            <uuid>ef4e55aadab64e15a84fd3ba16262074</uuid>
+                            <name>{#DESC}{#INSTANCE_NAME}(instance oss_memory)</name>
+                            <key>tdsql.get_value[1,{#INSTANCE_NAME},oss_memory]</key>
+                            <delay>1d</delay>
+                            <history>7d</history>
+                            <discover>NO_DISCOVER</discover>
+                            <units>MB</units>
+                            <description>分配的内存大小</description>
+                        </item_prototype>
+                        <item_prototype>
+                            <uuid>6b096e8cf36a48498fd637d1fa3a62dc</uuid>
+                            <name>{#DESC}{#INSTANCE_NAME}(instance oss_proxy_port)</name>
+                            <key>tdsql.get_value[1,{#INSTANCE_NAME},oss_proxy_port]</key>
+                            <delay>1d</delay>
+                            <history>7d</history>
+                            <discover>NO_DISCOVER</discover>
+                            <description>实例拥有的proxy端口号</description>
+                        </item_prototype>
+                        <item_prototype>
+                            <uuid>0769c1c716f441f0b2aa427b14e0e16a</uuid>
+                            <name>{#DESC}{#INSTANCE_NAME}(instance status)</name>
+                            <key>tdsql.get_value[1,{#INSTANCE_NAME},status]</key>
+                            <delay>30s</delay>
+                            <value_type>FLOAT</value_type>
+                            <description>实例状态标识</description>
+                            <trigger_prototypes>
+                                <trigger_prototype>
+                                    <uuid>b81dcd8e5db747c499298d094a35f299</uuid>
+                                    <expression>count(/fm_tdsql/tdsql.get_value[1,{#INSTANCE_NAME},status],5m,&quot;ne&quot;,0) &gt; 0</expression>
+                                    <name>TDSQL{#DESC} instance({#INSTANCE_NAME})实例状态异常</name>
+                                    <priority>INFO</priority>
+                                </trigger_prototype>
+                            </trigger_prototypes>
+                        </item_prototype>
+                    </item_prototypes>
+                </discovery_rule>
+                <discovery_rule>
+                    <uuid>82e82c1bb7ff43a98e2ac7a30ce78681</uuid>
+                    <name>txsql_discovery</name>
+                    <key>tdsql.discovery[2]</key>
+                    <delay>40s</delay>
+                    <lifetime>7d</lifetime>
+                    <item_prototypes>
+                        <item_prototype>
+                            <uuid>9d5aa264909e491bb8a9fb8189b06251</uuid>
+                            <name>{#DESC}/{#TXSQL_NAME}(txsql active_thread_count)</name>
+                            <key>tdsql.get_value[2,{#TXSQL_NAME},active_thread_count]</key>
+                            <discover>NO_DISCOVER</discover>
+                            <description>当前活跃线程数</description>
+                            <trigger_prototypes>
+                                <trigger_prototype>
+                                    <uuid>8d699aee9f024715b9224b271bf19448</uuid>
+                                    <expression>avg(/fm_tdsql/tdsql.get_value[2,{#TXSQL_NAME},active_thread_count],5m) &gt; 50</expression>
+                                    <name>TDSQL{#DESC} txsql({#TXSQL_NAME})活跃线程数高</name>
+                                    <priority>INFO</priority>
+                                </trigger_prototype>
+                            </trigger_prototypes>
+                        </item_prototype>
+                        <item_prototype>
+                            <uuid>997cfe8b935c45ef907bf8a524a45753</uuid>
+                            <name>{#DESC}/{#TXSQL_NAME}(txsql alive)</name>
+                            <key>tdsql.get_value[2,{#TXSQL_NAME},alive]</key>
+                            <delay>30s</delay>
+                            <value_type>FLOAT</value_type>
+                            <description>存活标识</description>
+                            <trigger_prototypes>
+                                <trigger_prototype>
+                                    <uuid>92a4a33dcbb54f8abfdac23c0bcd944b</uuid>
+                                    <expression>count(/fm_tdsql/tdsql.get_value[2,{#TXSQL_NAME},alive],5m,&quot;ne&quot;,0) &gt; 0</expression>
+                                    <name>TDSQL{#DESC} txsql({#TXSQL_NAME})存活状态异常</name>
+                                    <priority>INFO</priority>
+                                </trigger_prototype>
+                            </trigger_prototypes>
+                        </item_prototype>
+                        <item_prototype>
+                            <uuid>3343053935564fb78dbd8cbf043872bd</uuid>
+                            <name>{#DESC}/{#TXSQL_NAME}(txsql backup_monitor_binlog)</name>
+                            <key>tdsql.get_value[2,{#TXSQL_NAME},backup_monitor_binlog]</key>
+                            <delay>30s</delay>
+                            <trends>0</trends>
+                            <value_type>TEXT</value_type>
+                            <description>binlog备份成功标识</description>
+                            <trigger_prototypes>
+                                <trigger_prototype>
+                                    <uuid>4ea133541fc04f56becb84b16cf7540c</uuid>
+                                    <expression>find(/fm_tdsql/tdsql.get_value[2,{#TXSQL_NAME},backup_monitor_binlog],1h,&quot;like&quot;,&quot;-1&quot;) = 1</expression>
+                                    <name>TDSQL{#DESC} txsql({#TXSQL_NAME})binlog备份异常</name>
+                                    <priority>INFO</priority>
+                                </trigger_prototype>
+                            </trigger_prototypes>
+                        </item_prototype>
+                        <item_prototype>
+                            <uuid>98a6bf6c1dca41159fbe01ed5553aa72</uuid>
+                            <name>{#DESC}/{#TXSQL_NAME}(txsql backup_monitor_xtrabckup)</name>
+                            <key>tdsql.get_value[2,{#TXSQL_NAME},backup_monitor_xtrabckup]</key>
+                            <delay>30s</delay>
+                            <trends>0</trends>
+                            <value_type>TEXT</value_type>
+                            <description>xtrabackup备份成功标识</description>
+                            <trigger_prototypes>
+                                <trigger_prototype>
+                                    <uuid>edd3d1d13ed34fc99c3b423a03a70bd6</uuid>
+                                    <expression>find(/fm_tdsql/tdsql.get_value[2,{#TXSQL_NAME},backup_monitor_xtrabckup],1h,&quot;like&quot;,&quot;-1&quot;) = 1</expression>
+                                    <name>TDSQL{#DESC} txsql({#TXSQL_NAME})xtrabackup备份异常</name>
+                                    <priority>INFO</priority>
+                                </trigger_prototype>
+                            </trigger_prototypes>
+                        </item_prototype>
+                        <item_prototype>
+                            <uuid>30b6e985f72f4a109b0ed05a48527fb2</uuid>
+                            <name>{#DESC}/{#TXSQL_NAME}(txsql binlog_dir_total)</name>
+                            <key>tdsql.get_value[2,{#TXSQL_NAME},binlog_dir_total]</key>
+                            <delay>4h</delay>
+                            <history>7d</history>
+                            <discover>NO_DISCOVER</discover>
+                            <units>MB</units>
+                            <description>日志盘总大小</description>
+                        </item_prototype>
+                        <item_prototype>
+                            <uuid>a0e66a0e5219448da70939151f4616e4</uuid>
+                            <name>{#DESC}/{#TXSQL_NAME}(txsql binlog_dir_usage)</name>
+                            <key>tdsql.get_value[2,{#TXSQL_NAME},binlog_dir_usage]</key>
+                            <delay>2m</delay>
+                            <value_type>FLOAT</value_type>
+                            <units>%</units>
+                            <description>日志盘使用率</description>
+                            <trigger_prototypes>
+                                <trigger_prototype>
+                                    <uuid>530cf70574b64ff08627f28195ff7687</uuid>
+                                    <expression>avg(/fm_tdsql/tdsql.get_value[2,{#TXSQL_NAME},binlog_dir_usage],5m) &gt; 85</expression>
+                                    <name>TDSQL{#DESC} txsql({#TXSQL_NAME})日志盘使用率高</name>
+                                    <priority>INFO</priority>
+                                </trigger_prototype>
+                            </trigger_prototypes>
+                        </item_prototype>
+                        <item_prototype>
+                            <uuid>6f24ecb5f6664524879c0d9bdf16b966</uuid>
+                            <name>{#DESC}/{#TXSQL_NAME}(txsql binlog_dir_used)</name>
+                            <key>tdsql.get_value[2,{#TXSQL_NAME},binlog_dir_used]</key>
+                            <delay>2m</delay>
+                            <history>7d</history>
+                            <discover>NO_DISCOVER</discover>
+                            <units>MB</units>
+                            <description>日志盘已使用大小</description>
+                        </item_prototype>
+                        <item_prototype>
+                            <uuid>341ee07da209431b86b813229ec01177</uuid>
+                            <name>{#DESC}/{#TXSQL_NAME}(txsql cluster_name)</name>
+                            <key>tdsql.get_value[2,{#TXSQL_NAME},cluster_name]</key>
+                            <delay>1d</delay>
+                            <history>7d</history>
+                            <trends>0</trends>
+                            <value_type>TEXT</value_type>
+                            <description>所属集群名称</description>
+                        </item_prototype>
+                        <item_prototype>
+                            <uuid>fa76fb0a32e04ae9993b2a2e70afc603</uuid>
+                            <name>{#DESC}/{#TXSQL_NAME}(txsql connect_usage)</name>
+                            <key>tdsql.get_value[2,{#TXSQL_NAME},connect_usage]</key>
+                            <value_type>FLOAT</value_type>
+                            <units>%</units>
+                            <description>连接数使用率</description>
+                            <trigger_prototypes>
+                                <trigger_prototype>
+                                    <uuid>2857ff005e4b4050a000df03175952ea</uuid>
+                                    <expression>avg(/fm_tdsql/tdsql.get_value[2,{#TXSQL_NAME},connect_usage],5m) &gt; 85</expression>
+                                    <name>TDSQL{#DESC} txsql({#TXSQL_NAME})连接数使用率高</name>
+                                    <priority>INFO</priority>
+                                </trigger_prototype>
+                            </trigger_prototypes>
+                        </item_prototype>
+                        <item_prototype>
+                            <uuid>694b647cfc8e4de08c84c7f64fc83e8d</uuid>
+                            <name>{#DESC}/{#TXSQL_NAME}(txsql conn_active)</name>
+                            <key>tdsql.get_value[2,{#TXSQL_NAME},conn_active]</key>
+                            <description>当前活跃连接数</description>
+                            <trigger_prototypes>
+                                <trigger_prototype>
+                                    <uuid>3074713b73a94a4e8a1fb041d9e0cec0</uuid>
+                                    <expression>avg(/fm_tdsql/tdsql.get_value[2,{#TXSQL_NAME},conn_active],5m) &gt; 100</expression>
+                                    <name>TDSQL{#DESC} txsql({#TXSQL_NAME})活跃连接数高</name>
+                                    <priority>INFO</priority>
+                                </trigger_prototype>
+                            </trigger_prototypes>
+                        </item_prototype>
+                        <item_prototype>
+                            <uuid>d7cef44ab15e482eba91a10f23f273f6</uuid>
+                            <name>{#DESC}/{#TXSQL_NAME}(txsql conn_err_save)</name>
+                            <key>tdsql.get_value[2,{#TXSQL_NAME},conn_err_save]</key>
+                            <delay>30s</delay>
+                            <value_type>FLOAT</value_type>
+                            <description>TCP连接状态</description>
+                            <trigger_prototypes>
+                                <trigger_prototype>
+                                    <uuid>31dae961e32a459c890316ee1a3ed7ed</uuid>
+                                    <expression>count(/fm_tdsql/tdsql.get_value[2,{#TXSQL_NAME},conn_err_save],5m,&quot;ne&quot;,0) &gt; 0</expression>
+                                    <name>TDSQL{#DESC} txsql({#TXSQL_NAME})TCP连接状态异常</name>
+                                    <priority>INFO</priority>
+                                </trigger_prototype>
+                            </trigger_prototypes>
+                        </item_prototype>
+                        <item_prototype>
+                            <uuid>da46e5126d6a46f6806eddf60e092cbe</uuid>
+                            <name>{#DESC}/{#TXSQL_NAME}(txsql conn_max)</name>
+                            <key>tdsql.get_value[2,{#TXSQL_NAME},conn_max]</key>
+                            <delay>4h</delay>
+                            <history>7d</history>
+                            <discover>NO_DISCOVER</discover>
+                            <description>最大连接数配置</description>
+                        </item_prototype>
+                        <item_prototype>
+                            <uuid>04cad39bc3194e979c58b3bff80272b9</uuid>
+                            <name>{#DESC}/{#TXSQL_NAME}(txsql conn_total)</name>
+                            <key>tdsql.get_value[2,{#TXSQL_NAME},conn_total]</key>
+                            <discover>NO_DISCOVER</discover>
+                            <description>当前总连接数</description>
+                        </item_prototype>
+                        <item_prototype>
+                            <uuid>3ff57463396a4f2dacc33909217d8f2e</uuid>
+                            <name>{#DESC}/{#TXSQL_NAME}(txsql cpu_usage)</name>
+                            <key>tdsql.get_value[2,{#TXSQL_NAME},cpu_usage]</key>
+                            <value_type>FLOAT</value_type>
+                            <units>%</units>
+                            <description>CPU使用率</description>
+                            <trigger_prototypes>
+                                <trigger_prototype>
+                                    <uuid>df64311934f8462888ade408f53d1858</uuid>
+                                    <expression>avg(/fm_tdsql/tdsql.get_value[2,{#TXSQL_NAME},cpu_usage],5m) &gt; 85</expression>
+                                    <name>TDSQL{#DESC} txsql({#TXSQL_NAME})CPU使用率高</name>
+                                    <priority>INFO</priority>
+                                </trigger_prototype>
+                            </trigger_prototypes>
+                        </item_prototype>
+                        <item_prototype>
+                            <uuid>83a11ccaabed4c5a852c8ef3278a83be</uuid>
+                            <name>{#DESC}/{#TXSQL_NAME}(txsql data_dir_total)</name>
+                            <key>tdsql.get_value[2,{#TXSQL_NAME},data_dir_total]</key>
+                            <delay>4h</delay>
+                            <history>7d</history>
+                            <discover>NO_DISCOVER</discover>
+                            <units>MB</units>
+                            <description>数据盘总大小</description>
+                        </item_prototype>
+                        <item_prototype>
+                            <uuid>0eea67653a144837902f463da3e0574c</uuid>
+                            <name>{#DESC}/{#TXSQL_NAME}(txsql data_dir_usage)</name>
+                            <key>tdsql.get_value[2,{#TXSQL_NAME},data_dir_usage]</key>
+                            <delay>2m</delay>
+                            <value_type>FLOAT</value_type>
+                            <units>%</units>
+                            <description>数据盘使用率</description>
+                            <trigger_prototypes>
+                                <trigger_prototype>
+                                    <uuid>9f626c4348c24928a6bb20bb158cd53e</uuid>
+                                    <expression>avg(/fm_tdsql/tdsql.get_value[2,{#TXSQL_NAME},data_dir_usage],5m) &gt; 85</expression>
+                                    <name>TDSQL{#DESC} txsql({#TXSQL_NAME})数据盘使用率高</name>
+                                    <priority>INFO</priority>
+                                </trigger_prototype>
+                            </trigger_prototypes>
+                        </item_prototype>
+                        <item_prototype>
+                            <uuid>7b395edaeb724a2b9f5955eb11ada2d6</uuid>
+                            <name>{#DESC}/{#TXSQL_NAME}(txsql data_dir_used)</name>
+                            <key>tdsql.get_value[2,{#TXSQL_NAME},data_dir_used]</key>
+                            <delay>2m</delay>
+                            <history>7d</history>
+                            <discover>NO_DISCOVER</discover>
+                            <units>MB</units>
+                            <description>数据盘已使用大小</description>
+                        </item_prototype>
+                        <item_prototype>
+                            <uuid>635d9e41b3604021b692fe76a64ce4e4</uuid>
+                            <name>{#DESC}/{#TXSQL_NAME}(txsql gtidIsSame)</name>
+                            <key>tdsql.get_value[2,{#TXSQL_NAME},gtidIsSame]</key>
+                            <delay>5m</delay>
+                            <value_type>FLOAT</value_type>
+                            <description>GTID是否一致</description>
+                            <trigger_prototypes>
+                                <trigger_prototype>
+                                    <uuid>658161b4d9614f18bc756c695d000d09</uuid>
+                                    <expression>find(/fm_tdsql/tdsql.get_value[2,{#TXSQL_NAME},gtidIsSame],30m,&quot;eq&quot;,0) = 1</expression>
+                                    <name>TDSQL{#DESC} txsql({#TXSQL_NAME})GTID不一致</name>
+                                    <priority>INFO</priority>
+                                </trigger_prototype>
+                            </trigger_prototypes>
+                        </item_prototype>
+                        <item_prototype>
+                            <uuid>9231904be3b24c2fba27c72278acd0ae</uuid>
+                            <name>{#DESC}/{#TXSQL_NAME}(txsql iodelay)</name>
+                            <key>tdsql.get_value[2,{#TXSQL_NAME},iodelay]</key>
+                            <discover>NO_DISCOVER</discover>
+                            <units>ms</units>
+                            <description>I/O延迟</description>
+                            <trigger_prototypes>
+                                <trigger_prototype>
+                                    <uuid>eeb692882480419c9ed7768b69e93e08</uuid>
+                                    <expression>avg(/fm_tdsql/tdsql.get_value[2,{#TXSQL_NAME},iodelay],5m) &gt; 50</expression>
+                                    <name>TDSQL{#DESC} txsql({#TXSQL_NAME})IO延迟高</name>
+                                    <priority>INFO</priority>
+                                </trigger_prototype>
+                            </trigger_prototypes>
+                        </item_prototype>
+                        <item_prototype>
+                            <uuid>4210e396a6ac4ea0baf3bcd75f6fc7be</uuid>
+                            <name>{#DESC}/{#TXSQL_NAME}(txsql io_usage)</name>
+                            <key>tdsql.get_value[2,{#TXSQL_NAME},io_usage]</key>
+                            <delay>2m</delay>
+                            <value_type>FLOAT</value_type>
+                            <units>%</units>
+                            <description>I/O使用率</description>
+                            <trigger_prototypes>
+                                <trigger_prototype>
+                                    <uuid>91c5fe96f198494fafc51d74c2031193</uuid>
+                                    <expression>avg(/fm_tdsql/tdsql.get_value[2,{#TXSQL_NAME},io_usage],5m) &gt; 75</expression>
+                                    <name>TDSQL{#DESC} txsql({#TXSQL_NAME})IO使用率高</name>
+                                    <priority>INFO</priority>
+                                </trigger_prototype>
+                            </trigger_prototypes>
+                        </item_prototype>
+                        <item_prototype>
+                            <uuid>6df0445cc41d4c23abb8805629187e26</uuid>
+                            <name>{#DESC}/{#TXSQL_NAME}(txsql ismaster)</name>
+                            <key>tdsql.get_value[2,{#TXSQL_NAME},ismaster]</key>
+                            <history>7d</history>
+                            <trends>0</trends>
+                            <discover>NO_DISCOVER</discover>
+                            <value_type>TEXT</value_type>
+                            <description>当前节点是否为主库的标识</description>
+                        </item_prototype>
+                        <item_prototype>
+                            <uuid>f396ed97cabb4d9ca6c735beef0946c2</uuid>
+                            <name>{#DESC}/{#TXSQL_NAME}(txsql is_notsame)</name>
+                            <key>tdsql.get_value[2,{#TXSQL_NAME},is_notsame]</key>
+                            <delay>30s</delay>
+                            <history>7d</history>
+                            <trends>0</trends>
+                            <value_type>TEXT</value_type>
+                            <description>重启标识</description>
+                            <trigger_prototypes>
+                                <trigger_prototype>
+                                    <uuid>b117f086fa5f456a833ab631cb2cca70</uuid>
+                                    <expression>find(/fm_tdsql/tdsql.get_value[2,{#TXSQL_NAME},is_notsame],30m,&quot;like&quot;,&quot;false&quot;) = 1 and last(/fm_tdsql/tdsql.get_value[2,{#TXSQL_NAME},is_notsame]) = &quot;true&quot;</expression>
+                                    <name>TDSQL{#DESC} txsql({#TXSQL_NAME})发生重启</name>
+                                    <priority>INFO</priority>
+                                </trigger_prototype>
+                            </trigger_prototypes>
+                        </item_prototype>
+                        <item_prototype>
+                            <uuid>141515745b984b8c95465415bbb6313f</uuid>
+                            <name>{#DESC}/{#TXSQL_NAME}(txsql mem_total)</name>
+                            <key>tdsql.get_value[2,{#TXSQL_NAME},mem_total]</key>
+                            <delay>4h</delay>
+                            <history>7d</history>
+                            <discover>NO_DISCOVER</discover>
+                            <units>MB</units>
+                            <description>内存总大小</description>
+                        </item_prototype>
+                        <item_prototype>
+                            <uuid>88697f9b8c43432f99abd84c541527c8</uuid>
+                            <name>{#DESC}/{#TXSQL_NAME}(txsql mem_usage)</name>
+                            <key>tdsql.get_value[2,{#TXSQL_NAME},mem_usage]</key>
+                            <delay>2m</delay>
+                            <value_type>FLOAT</value_type>
+                            <units>%</units>
+                            <description>内存使用率</description>
+                            <trigger_prototypes>
+                                <trigger_prototype>
+                                    <uuid>2b800a5ce4a0445885e2c4bbb1a8de03</uuid>
+                                    <expression>avg(/fm_tdsql/tdsql.get_value[2,{#TXSQL_NAME},mem_usage],5m) &gt; 95</expression>
+                                    <name>TDSQL{#DESC} txsql({#TXSQL_NAME})内存使用率高</name>
+                                    <priority>INFO</priority>
+                                </trigger_prototype>
+                            </trigger_prototypes>
+                        </item_prototype>
+                        <item_prototype>
+                            <uuid>8c1f80ffc65e47139ea1cadf7692a6db</uuid>
+                            <name>{#DESC}/{#TXSQL_NAME}(txsql mem_used)</name>
+                            <key>tdsql.get_value[2,{#TXSQL_NAME},mem_used]</key>
+                            <delay>2m</delay>
+                            <history>7d</history>
+                            <discover>NO_DISCOVER</discover>
+                            <units>MB</units>
+                            <description>已使用内存大小</description>
+                        </item_prototype>
+                        <item_prototype>
+                            <uuid>dfd87e392d5c425ca26024d672c89e6b</uuid>
+                            <name>{#DESC}/{#TXSQL_NAME}(txsql mtime)</name>
+                            <key>tdsql.get_value[2,{#TXSQL_NAME},mtime]</key>
+                            <delay>3m</delay>
+                            <history>7d</history>
+                            <discover>NO_DISCOVER</discover>
+                            <units>timestamp</units>
+                            <description>监控指标上报时间</description>
+                            <trigger_prototypes>
+                                <trigger_prototype>
+                                    <uuid>b0f541d8755643b1864ce385f58d49b6</uuid>
+                                    <expression>now() - last(/fm_tdsql/tdsql.get_value[2,{#TXSQL_NAME},mtime]) &gt; 600</expression>
+                                    <name>TDSQL{#DESC} txsql({#TXSQL_NAME})监控指标上报延迟</name>
+                                    <priority>INFO</priority>
+                                </trigger_prototype>
+                            </trigger_prototypes>
+                        </item_prototype>
+                        <item_prototype>
+                            <uuid>94d936e9e94e47e698ddcadc5d4cb8f8</uuid>
+                            <name>{#DESC}/{#TXSQL_NAME}(txsql processlist_slow_sql)</name>
+                            <key>tdsql.get_value[2,{#TXSQL_NAME},processlist_slow_sql]</key>
+                            <delay>30s</delay>
+                            <description>当前PROCESSLIST中的慢查询数量</description>
+                            <trigger_prototypes>
+                                <trigger_prototype>
+                                    <uuid>1520293f60744546a1dc09f5f536c59c</uuid>
+                                    <expression>last(/fm_tdsql/tdsql.get_value[2,{#TXSQL_NAME},processlist_slow_sql]) &gt; 10</expression>
+                                    <name>TDSQL{#DESC} txsql({#TXSQL_NAME})PROCESSLIST中慢查询数量多</name>
+                                    <priority>INFO</priority>
+                                </trigger_prototype>
+                            </trigger_prototypes>
+                        </item_prototype>
+                        <item_prototype>
+                            <uuid>5883532f34f14cfeaecb8b082d9beba3</uuid>
+                            <name>{#DESC}/{#TXSQL_NAME}(txsql process_fh_max)</name>
+                            <key>tdsql.get_value[2,{#TXSQL_NAME},process_fh_max]</key>
+                            <delay>4h</delay>
+                            <history>7d</history>
+                            <discover>NO_DISCOVER</discover>
+                            <description>进程文件句柄上限配置</description>
+                            <trigger_prototypes>
+                                <trigger_prototype>
+                                    <uuid>a23b9d04a7604735866e48119b3d9916</uuid>
+                                    <expression>last(/fm_tdsql/tdsql.get_value[2,{#TXSQL_NAME},process_fh_max]) &lt; 10000</expression>
+                                    <name>TDSQL{#DESC} txsql({#TXSQL_NAME})DB进程文件句柄配置低</name>
+                                    <priority>INFO</priority>
+                                </trigger_prototype>
+                            </trigger_prototypes>
+                        </item_prototype>
+                        <item_prototype>
+                            <uuid>37b9ca66a65b44ebb2e8481c995c3656</uuid>
+                            <name>{#DESC}/{#TXSQL_NAME}(txsql process_fh_usage)</name>
+                            <key>tdsql.get_value[2,{#TXSQL_NAME},process_fh_usage]</key>
+                            <delay>2m</delay>
+                            <value_type>FLOAT</value_type>
+                            <units>%</units>
+                            <description>文件句柄使用率</description>
+                            <trigger_prototypes>
+                                <trigger_prototype>
+                                    <uuid>7ff3a851fa734027bff69e10a3838fea</uuid>
+                                    <expression>avg(/fm_tdsql/tdsql.get_value[2,{#TXSQL_NAME},process_fh_usage],5m) &gt; 80</expression>
+                                    <name>TDSQL{#DESC} txsql({#TXSQL_NAME})文件句柄使用率高</name>
+                                    <priority>INFO</priority>
+                                </trigger_prototype>
+                            </trigger_prototypes>
+                        </item_prototype>
+                        <item_prototype>
+                            <uuid>0fc003251b634a7bad7a2bd7f983b993</uuid>
+                            <name>{#DESC}/{#TXSQL_NAME}(txsql process_fh_used)</name>
+                            <key>tdsql.get_value[2,{#TXSQL_NAME},process_fh_used]</key>
+                            <delay>2m</delay>
+                            <history>7d</history>
+                            <discover>NO_DISCOVER</discover>
+                            <description>已使用进程文件句柄数量</description>
+                        </item_prototype>
+                        <item_prototype>
+                            <uuid>9a83cf2e0aca4567ac3a0bc41bbd71e5</uuid>
+                            <name>{#DESC}/{#TXSQL_NAME}(txsql QPS)</name>
+                            <key>tdsql.get_value[2,{#TXSQL_NAME},QPS]</key>
+                            <discover>NO_DISCOVER</discover>
+                            <value_type>FLOAT</value_type>
+                            <description>QPS</description>
+                        </item_prototype>
+                        <item_prototype>
+                            <uuid>e687c386eb7c4d7792b6dbae5c7b35f1</uuid>
+                            <name>{#DESC}/{#TXSQL_NAME}(txsql set_name)</name>
+                            <key>tdsql.get_value[2,{#TXSQL_NAME},set_name]</key>
+                            <delay>1d</delay>
+                            <history>7d</history>
+                            <trends>0</trends>
+                            <value_type>TEXT</value_type>
+                            <description>所属set名称</description>
+                        </item_prototype>
+                        <item_prototype>
+                            <uuid>ec83e546a16940329e378da39888e16b</uuid>
+                            <name>{#DESC}/{#TXSQL_NAME}(txsql slave_delay)</name>
+                            <key>tdsql.get_value[2,{#TXSQL_NAME},slave_delay]</key>
+                            <units>s</units>
+                            <description>从库延迟</description>
+                            <trigger_prototypes>
+                                <trigger_prototype>
+                                    <uuid>7f08b115c9d44c6a9d4e6883a8a8be47</uuid>
+                                    <expression>avg(/fm_tdsql/tdsql.get_value[2,{#TXSQL_NAME},slave_delay],5m) &gt; 1800</expression>
+                                    <name>TDSQL{#DESC} txsql({#TXSQL_NAME})主从复制延迟高</name>
+                                    <priority>INFO</priority>
+                                </trigger_prototype>
+                            </trigger_prototypes>
+                        </item_prototype>
+                        <item_prototype>
+                            <uuid>65ad6585bcf94bd6b621f0d0185ce678</uuid>
+                            <name>{#DESC}/{#TXSQL_NAME}(txsql slave_io_error)</name>
+                            <key>tdsql.get_value[2,{#TXSQL_NAME},slave_io_error]</key>
+                            <history>7d</history>
+                            <trends>0</trends>
+                            <discover>NO_DISCOVER</discover>
+                            <value_type>TEXT</value_type>
+                            <description>IO线程的报错信息</description>
+                        </item_prototype>
+                        <item_prototype>
+                            <uuid>c0f6d43a640442c8bb0e0de2dd0d49a1</uuid>
+                            <name>{#DESC}/{#TXSQL_NAME}(txsql slave_io_running)</name>
+                            <key>tdsql.get_value[2,{#TXSQL_NAME},slave_io_running]</key>
+                            <value_type>FLOAT</value_type>
+                            <description>主从复制IO线程是否处于RUNNING状态</description>
+                            <trigger_prototypes>
+                                <trigger_prototype>
+                                    <uuid>d3e3fbb4e4f348a5b3d90a240dc20fc0</uuid>
+                                    <expression>count(/fm_tdsql/tdsql.get_value[2,{#TXSQL_NAME},slave_io_running],10m,&quot;eq&quot;,0) &gt; 0</expression>
+                                    <name>TDSQL{#DESC} txsql({#TXSQL_NAME})主从复制IO线程异常</name>
+                                    <priority>INFO</priority>
+                                </trigger_prototype>
+                            </trigger_prototypes>
+                        </item_prototype>
+                        <item_prototype>
+                            <uuid>818e80bad6324ef0afe7b34fdce1ace9</uuid>
+                            <name>{#DESC}/{#TXSQL_NAME}(txsql slave_sql_error)</name>
+                            <key>tdsql.get_value[2,{#TXSQL_NAME},slave_sql_error]</key>
+                            <history>7d</history>
+                            <trends>0</trends>
+                            <discover>NO_DISCOVER</discover>
+                            <value_type>TEXT</value_type>
+                            <description>SQL线程的报错信息</description>
+                        </item_prototype>
+                        <item_prototype>
+                            <uuid>d51ed576939c43ceaee1a47e16a0c3a5</uuid>
+                            <name>{#DESC}/{#TXSQL_NAME}(txsql slave_sql_running)</name>
+                            <key>tdsql.get_value[2,{#TXSQL_NAME},slave_sql_running]</key>
+                            <value_type>FLOAT</value_type>
+                            <description>主从复制SQL线程是否处于RUNNING状态</description>
+                            <trigger_prototypes>
+                                <trigger_prototype>
+                                    <uuid>57efbbffc4e34bf4b08a17d9e47e69a4</uuid>
+                                    <expression>count(/fm_tdsql/tdsql.get_value[2,{#TXSQL_NAME},slave_sql_running],10m,&quot;eq&quot;,0) &gt; 0</expression>
+                                    <name>TDSQL{#DESC} txsql({#TXSQL_NAME})主从复制SQL线程异常</name>
+                                    <priority>INFO</priority>
+                                </trigger_prototype>
+                            </trigger_prototypes>
+                        </item_prototype>
+                        <item_prototype>
+                            <uuid>907d6f68fe444f6fa31ef738056fdaca</uuid>
+                            <name>{#DESC}/{#TXSQL_NAME}(txsql slow_query_rate)</name>
+                            <key>tdsql.get_value[2,{#TXSQL_NAME},slow_query_rate]</key>
+                            <discover>NO_DISCOVER</discover>
+                            <value_type>FLOAT</value_type>
+                            <units>%</units>
+                            <description>慢查询比率</description>
+                            <trigger_prototypes>
+                                <trigger_prototype>
+                                    <uuid>eee6a9d543b342a9a972e5a242c0e525</uuid>
+                                    <expression>avg(/fm_tdsql/tdsql.get_value[2,{#TXSQL_NAME},slow_query_rate],5m) &gt; 20</expression>
+                                    <name>TDSQL{#DESC} txsql({#TXSQL_NAME})慢查询比率高</name>
+                                    <priority>INFO</priority>
+                                </trigger_prototype>
+                            </trigger_prototypes>
+                        </item_prototype>
+                        <item_prototype>
+                            <uuid>bce1c9d6748040beb8e09569b87b2b74</uuid>
+                            <name>{#DESC}/{#TXSQL_NAME}(txsql sqlasyn_state)</name>
+                            <key>tdsql.get_value[2,{#TXSQL_NAME},sqlasyn_state]</key>
+                            <history>7d</history>
+                            <trends>0</trends>
+                            <value_type>TEXT</value_type>
+                            <description>当前强同步状态与强同步配置是否一致</description>
+                            <trigger_prototypes>
+                                <trigger_prototype>
+                                    <uuid>adffe752ffae4bb6803c546585219ef0</uuid>
+                                    <expression>find(/fm_tdsql/tdsql.get_value[2,{#TXSQL_NAME},sqlasyn_state],30m,&quot;like&quot;,&quot;false&quot;) = 1</expression>
+                                    <name>TDSQL{#DESC} txsql({#TXSQL_NAME})强同步状态异常</name>
+                                    <priority>INFO</priority>
+                                </trigger_prototype>
+                            </trigger_prototypes>
+                        </item_prototype>
+                        <item_prototype>
+                            <uuid>0cffed12acc4481d8d53f40ef3f2a361</uuid>
+                            <name>{#DESC}/{#TXSQL_NAME}(txsql waiting_thread_count)</name>
+                            <key>tdsql.get_value[2,{#TXSQL_NAME},waiting_thread_count]</key>
+                            <discover>NO_DISCOVER</discover>
+                            <description>当前出现waiting的线程数</description>
+                            <trigger_prototypes>
+                                <trigger_prototype>
+                                    <uuid>163434637d2b468092ad4f69abf1b8f8</uuid>
+                                    <expression>avg(/fm_tdsql/tdsql.get_value[2,{#TXSQL_NAME},waiting_thread_count],5m) &gt; 50</expression>
+                                    <name>TDSQL{#DESC} txsql({#TXSQL_NAME})等待线程数高</name>
+                                    <priority>INFO</priority>
+                                </trigger_prototype>
+                            </trigger_prototypes>
+                        </item_prototype>
+                    </item_prototypes>
+                </discovery_rule>
+                <discovery_rule>
+                    <uuid>51d3a4c74e234c3ca404e3c581919f42</uuid>
+                    <name>proxy_discovery</name>
+                    <key>tdsql.discovery[3]</key>
+                    <delay>37s</delay>
+                    <lifetime>7d</lifetime>
+                    <item_prototypes>
+                        <item_prototype>
+                            <uuid>6514c6538d9c4d46a883f94e09adc0c2</uuid>
+                            <name>{#DESC}/{#PROXY_NAME}(proxy alive)</name>
+                            <key>tdsql.get_value[3,{#PROXY_NAME},alive]</key>
+                            <delay>30s</delay>
+                            <history>31d</history>
+                            <trends>0</trends>
+                            <value_type>TEXT</value_type>
+                            <description>存活标识</description>
+                            <trigger_prototypes>
+                                <trigger_prototype>
+                                    <uuid>b2229354a6d34e6b8a1d950e07573dd8</uuid>
+                                    <expression>find(/fm_tdsql/tdsql.get_value[3,{#PROXY_NAME},alive],5m,&quot;like&quot;,&quot;false&quot;) = 1</expression>
+                                    <name>TDSQL{#DESC} proxy({#PROXY_NAME})存活状态异常</name>
+                                    <priority>INFO</priority>
+                                </trigger_prototype>
+                            </trigger_prototypes>
+                        </item_prototype>
+                        <item_prototype>
+                            <uuid>6b436bd9c8fa4af79164171e201f5bf2</uuid>
+                            <name>{#DESC}/{#PROXY_NAME}(proxy cluster_name)</name>
+                            <key>tdsql.get_value[3,{#PROXY_NAME},cluster_name]</key>
+                            <delay>1d</delay>
+                            <history>7d</history>
+                            <trends>0</trends>
+                            <value_type>TEXT</value_type>
+                            <description>所属集群名称</description>
+                        </item_prototype>
+                        <item_prototype>
+                            <uuid>ac0c4ee5a6444b3b8b23387d317ce552</uuid>
+                            <name>{#DESC}/{#PROXY_NAME}(proxy connect_count)</name>
+                            <key>tdsql.get_value[3,{#PROXY_NAME},connect_count]</key>
+                            <discover>NO_DISCOVER</discover>
+                            <description>当前连接数</description>
+                        </item_prototype>
+                        <item_prototype>
+                            <uuid>789f99b8f51f4db499133cf51043330b</uuid>
+                            <name>{#DESC}/{#PROXY_NAME}(proxy connect_max)</name>
+                            <key>tdsql.get_value[3,{#PROXY_NAME},connect_max]</key>
+                            <delay>4h</delay>
+                            <history>7d</history>
+                            <discover>NO_DISCOVER</discover>
+                            <description>最大连接数配置</description>
+                        </item_prototype>
+                        <item_prototype>
+                            <uuid>0a55cdeb92ab4f7c8f1ed6baec95652a</uuid>
+                            <name>{#DESC}/{#PROXY_NAME}(proxy conn_usage)</name>
+                            <key>tdsql.get_value[3,{#PROXY_NAME},conn_usage]</key>
+                            <value_type>FLOAT</value_type>
+                            <units>%</units>
+                            <description>已使用连接数百分比</description>
+                            <trigger_prototypes>
+                                <trigger_prototype>
+                                    <uuid>f6cdfb9f3d774553a7ea1e75e7f94343</uuid>
+                                    <expression>avg(/fm_tdsql/tdsql.get_value[3,{#PROXY_NAME},conn_usage],5m) &gt; 80</expression>
+                                    <name>TDSQL{#DESC} proxy({#PROXY_NAME})连接数使用率高</name>
+                                    <priority>INFO</priority>
+                                </trigger_prototype>
+                            </trigger_prototypes>
+                        </item_prototype>
+                        <item_prototype>
+                            <uuid>8a012fe240e7494f9ee52877bcb49e39</uuid>
+                            <name>{#DESC}/{#PROXY_NAME}(proxy fail_connect_client)</name>
+                            <key>tdsql.get_value[3,{#PROXY_NAME},fail_connect_client]</key>
+                            <discover>NO_DISCOVER</discover>
+                            <description>client侧因素导致连接失败的次数</description>
+                        </item_prototype>
+                        <item_prototype>
+                            <uuid>beaef6a28cba4130a8e58b8d073de180</uuid>
+                            <name>{#DESC}/{#PROXY_NAME}(proxy fail_connect_server)</name>
+                            <key>tdsql.get_value[3,{#PROXY_NAME},fail_connect_server]</key>
+                            <discover>NO_DISCOVER</discover>
+                            <description>后端DB侧因素导致连接失败的次数</description>
+                        </item_prototype>
+                        <item_prototype>
+                            <uuid>adc9cd1e83214314a5d8a41c43c40d7b</uuid>
+                            <name>{#DESC}/{#PROXY_NAME}(proxy ioping)</name>
+                            <key>tdsql.get_value[3,{#PROXY_NAME},ioping]</key>
+                            <discover>NO_DISCOVER</discover>
+                            <units>us</units>
+                            <description>proxy随机写入4KB大小数据块的耗时</description>
+                        </item_prototype>
+                        <item_prototype>
+                            <uuid>6eae24db67324805bac3d7937870096c</uuid>
+                            <name>{#DESC}/{#PROXY_NAME}(proxy mtime)</name>
+                            <key>tdsql.get_value[3,{#PROXY_NAME},mtime]</key>
+                            <delay>3m</delay>
+                            <history>7d</history>
+                            <discover>NO_DISCOVER</discover>
+                            <units>timestamp</units>
+                            <description>监控指标上报时间</description>
+                            <trigger_prototypes>
+                                <trigger_prototype>
+                                    <uuid>c568e8edda784a53aa9709f26675fe03</uuid>
+                                    <expression>now() - last(/fm_tdsql/tdsql.get_value[3,{#PROXY_NAME},mtime]) &gt; 600</expression>
+                                    <name>TDSQL{#DESC} proxy({#PROXY_NAME})监控指标上报延迟</name>
+                                    <priority>INFO</priority>
+                                </trigger_prototype>
+                            </trigger_prototypes>
+                        </item_prototype>
+                        <item_prototype>
+                            <uuid>7f57a53325194e3e8b26a81e48051db1</uuid>
+                            <name>{#DESC}/{#PROXY_NAME}/(proxy number_of_confused_2pc_tx)</name>
+                            <key>tdsql.get_value[3,{#PROXY_NAME},number_of_confused_2pc_tx]</key>
+                            <discover>NO_DISCOVER</discover>
+                            <description>未决分布式事务数量</description>
+                        </item_prototype>
+                        <item_prototype>
+                            <uuid>5c9cebe6f1b445d6b262a5e0920e5a29</uuid>
+                            <name>{#DESC}/{#PROXY_NAME}(proxy proxy_cpu_usage)</name>
+                            <key>tdsql.get_value[3,{#PROXY_NAME},proxy_cpu_usage]</key>
+                            <discover>NO_DISCOVER</discover>
+                            <value_type>FLOAT</value_type>
+                            <units>%</units>
+                            <description>CPU使用率</description>
+                            <trigger_prototypes>
+                                <trigger_prototype>
+                                    <uuid>653533613c114feeaf6c0a7824de114c</uuid>
+                                    <expression>avg(/fm_tdsql/tdsql.get_value[3,{#PROXY_NAME},proxy_cpu_usage],5m) &gt; 80</expression>
+                                    <name>TDSQL{#DESC} proxy({#PROXY_NAME})CPU使用率高</name>
+                                    <priority>INFO</priority>
+                                </trigger_prototype>
+                            </trigger_prototypes>
+                        </item_prototype>
+                        <item_prototype>
+                            <uuid>e505303d91ca43c1a14af2e9056b3800</uuid>
+                            <name>{#DESC}/{#PROXY_NAME}(proxy proxy_is_restart)</name>
+                            <key>tdsql.get_value[3,{#PROXY_NAME},proxy_is_restart]</key>
+                            <delay>30s</delay>
+                            <value_type>FLOAT</value_type>
+                            <description>1分钟内发生过重启的标识</description>
+                            <trigger_prototypes>
+                                <trigger_prototype>
+                                    <uuid>c0dc7f072ee14f9ebec242b5246580bd</uuid>
+                                    <expression>count(/fm_tdsql/tdsql.get_value[3,{#PROXY_NAME},proxy_is_restart],30m,&quot;ne&quot;,0) &gt; 0</expression>
+                                    <name>TDSQL{#DESC} proxy({#PROXY_NAME})发生重启</name>
+                                    <priority>INFO</priority>
+                                </trigger_prototype>
+                            </trigger_prototypes>
+                        </item_prototype>
+                        <item_prototype>
+                            <uuid>1c2bb94d51cc4c839994bc1e427d320d</uuid>
+                            <name>{#DESC}/{#PROXY_NAME}(proxy Rss)</name>
+                            <key>tdsql.get_value[3,{#PROXY_NAME},Rss]</key>
+                            <discover>NO_DISCOVER</discover>
+                            <units>KB</units>
+                            <description>物理内存占用量</description>
+                        </item_prototype>
+                        <item_prototype>
+                            <uuid>8f5919a8b4fb48b8905124560004b8be</uuid>
+                            <name>{#DESC}/{#PROXY_NAME}(proxy TPS)</name>
+                            <key>tdsql.get_value[3,{#PROXY_NAME},TPS]</key>
+                            <discover>NO_DISCOVER</discover>
+                            <description>TPS</description>
+                        </item_prototype>
+                    </item_prototypes>
+                </discovery_rule>
+                <discovery_rule>
+                    <uuid>1ad0758bbc4f4bb78325115b4ea0cb67</uuid>
+                    <name>zookeeper_discovery</name>
+                    <key>tdsql.discovery[4]</key>
+                    <delay>30s</delay>
+                    <lifetime>7d</lifetime>
+                    <item_prototypes>
+                        <item_prototype>
+                            <uuid>91f87c3054b64abfb00fe3f3ea2fa4fc</uuid>
+                            <name>{#ZKNODE_NAME}(zookeeper alive)</name>
+                            <key>tdsql.get_value[4,{#ZKNODE_NAME},alive]</key>
+                            <delay>30s</delay>
+                            <history>31d</history>
+                            <trends>0</trends>
+                            <value_type>TEXT</value_type>
+                            <description>存活标识</description>
+                            <trigger_prototypes>
+                                <trigger_prototype>
+                                    <uuid>197c6734d05c4bddba568a3a6a1e4c94</uuid>
+                                    <expression>find(/fm_tdsql/tdsql.get_value[4,{#ZKNODE_NAME},alive],5m,&quot;like&quot;,&quot;false&quot;) = 1</expression>
+                                    <name>TDSQL zookeeper({#ZKNODE_NAME})存活状态异常</name>
+                                    <priority>INFO</priority>
+                                </trigger_prototype>
+                            </trigger_prototypes>
+                        </item_prototype>
+                        <item_prototype>
+                            <uuid>1cb9c3a4d10c4a42bb71f107dacb0440</uuid>
+                            <name>{#ZKNODE_NAME}(zookeeper master_switch)</name>
+                            <key>tdsql.get_value[4,{#ZKNODE_NAME},master_switch]</key>
+                            <delay>30s</delay>
+                            <value_type>FLOAT</value_type>
+                            <description>leader发生过切换的标识</description>
+                            <trigger_prototypes>
+                                <trigger_prototype>
+                                    <uuid>fd00c334458443c9b2da0da1b3deceab</uuid>
+                                    <expression>count(/fm_tdsql/tdsql.get_value[4,{#ZKNODE_NAME},master_switch],30m,&quot;ne&quot;,0) &gt; 0</expression>
+                                    <name>TDSQL zookeeper({#ZKNODE_NAME})发生leader切换</name>
+                                    <priority>INFO</priority>
+                                </trigger_prototype>
+                            </trigger_prototypes>
+                        </item_prototype>
+                        <item_prototype>
+                            <uuid>35451a799a0f475a8f5f6b302b6d9718</uuid>
+                            <name>{#ZKNODE_NAME}(zookeeper Mode)</name>
+                            <key>tdsql.get_value[4,{#ZKNODE_NAME},Mode]</key>
+                            <delay>1d</delay>
+                            <history>7d</history>
+                            <trends>0</trends>
+                            <discover>NO_DISCOVER</discover>
+                            <value_type>TEXT</value_type>
+                            <description>节点角色</description>
+                        </item_prototype>
+                        <item_prototype>
+                            <uuid>5b70174d6bff4b3ba76658a2e629861d</uuid>
+                            <name>{#ZKNODE_NAME}(zookeeper mtime)</name>
+                            <key>tdsql.get_value[4,{#ZKNODE_NAME},mtime]</key>
+                            <delay>3m</delay>
+                            <history>7d</history>
+                            <discover>NO_DISCOVER</discover>
+                            <units>timestamp</units>
+                            <description>监控指标上报时间</description>
+                            <trigger_prototypes>
+                                <trigger_prototype>
+                                    <uuid>aeebbc6556f847f2b6505933e93e5582</uuid>
+                                    <expression>now() - last(/fm_tdsql/tdsql.get_value[4,{#ZKNODE_NAME},mtime]) &gt; 600</expression>
+                                    <name>TDSQL zookeeper({#ZKNODE_NAME})监控指标上报延迟</name>
+                                    <priority>INFO</priority>
+                                </trigger_prototype>
+                            </trigger_prototypes>
+                        </item_prototype>
+                        <item_prototype>
+                            <uuid>3515d97a8f0843eb8fbec3d27e68979b</uuid>
+                            <name>{#ZKNODE_NAME}(zookeeper zk_avg_latency)</name>
+                            <key>tdsql.get_value[4,{#ZKNODE_NAME},zk_avg_latency]</key>
+                            <history>31d</history>
+                            <discover>NO_DISCOVER</discover>
+                            <value_type>FLOAT</value_type>
+                            <units>ms</units>
+                            <description>ZK平均响应延迟</description>
+                            <trigger_prototypes>
+                                <trigger_prototype>
+                                    <uuid>90b61623c0de4fc1a73e2ec4c3170113</uuid>
+                                    <expression>avg(/fm_tdsql/tdsql.get_value[4,{#ZKNODE_NAME},zk_avg_latency],5m) &gt; 10</expression>
+                                    <name>TDSQL zookeeper({#ZKNODE_NAME})请求响应延迟过高</name>
+                                    <priority>INFO</priority>
+                                </trigger_prototype>
+                            </trigger_prototypes>
+                        </item_prototype>
+                        <item_prototype>
+                            <uuid>f9ba3f844e59432a8b8223e828d68af7</uuid>
+                            <name>{#ZKNODE_NAME}(zookeeper zk_num_alive_connections)</name>
+                            <key>tdsql.get_value[4,{#ZKNODE_NAME},zk_num_alive_connections]</key>
+                            <discover>NO_DISCOVER</discover>
+                            <description>当前活跃连接数</description>
+                        </item_prototype>
+                        <item_prototype>
+                            <uuid>c052da22c39f4180acae77a7bc8539b9</uuid>
+                            <name>{#ZKNODE_NAME}(zookeeper zk_outstanding_requests)</name>
+                            <key>tdsql.get_value[4,{#ZKNODE_NAME},zk_outstanding_requests]</key>
+                            <discover>NO_DISCOVER</discover>
+                            <description>请求排队数量</description>
+                        </item_prototype>
+                        <item_prototype>
+                            <uuid>c9154d78a7a94afbbf828259932cfa11</uuid>
+                            <name>{#ZKNODE_NAME}(zookeeper zk_pending_syncs)</name>
+                            <key>tdsql.get_value[4,{#ZKNODE_NAME},zk_pending_syncs]</key>
+                            <trends>0</trends>
+                            <discover>NO_DISCOVER</discover>
+                            <value_type>TEXT</value_type>
+                            <description>当前节点为master时，pending syncs的数量</description>
+                        </item_prototype>
+                        <item_prototype>
+                            <uuid>07db3b2a240646e1902498d4c4b7888c</uuid>
+                            <name>{#ZKNODE_NAME}(zookeeper zk_watch_count)</name>
+                            <key>tdsql.get_value[4,{#ZKNODE_NAME},zk_watch_count]</key>
+                            <delay>2m</delay>
+                            <discover>NO_DISCOVER</discover>
+                            <description>watch数量</description>
+                        </item_prototype>
+                        <item_prototype>
+                            <uuid>3102be4ce0b04513b807a960d1670e68</uuid>
+                            <name>{#ZKNODE_NAME}(zookeeper zk_znode_count)</name>
+                            <key>tdsql.get_value[4,{#ZKNODE_NAME},zk_znode_count]</key>
+                            <delay>2m</delay>
+                            <discover>NO_DISCOVER</discover>
+                            <description>znode数量</description>
+                        </item_prototype>
+                    </item_prototypes>
+                </discovery_rule>
+                <discovery_rule>
+                    <uuid>437844d0aa5a44f188865b491a219be5</uuid>
+                    <name>scheduler_discovery</name>
+                    <key>tdsql.discovery[11]</key>
+                    <delay>30s</delay>
+                    <lifetime>7d</lifetime>
+                    <item_prototypes>
+                        <item_prototype>
+                            <uuid>db0842e52b494eab92843c3e858597a1</uuid>
+                            <name>{#SCHEDULER_NAME}(scheduler checkheartbeat)</name>
+                            <key>tdsql.get_value[11,{#SCHEDULER_NAME},checkheartbeat]</key>
+                            <delay>30s</delay>
+                            <value_type>FLOAT</value_type>
+                            <description>主scheduler的心跳</description>
+                            <trigger_prototypes>
+                                <trigger_prototype>
+                                    <uuid>750155d4794f4dd2b72e50e31e354ce1</uuid>
+                                    <expression>count(/fm_tdsql/tdsql.get_value[11,{#SCHEDULER_NAME},checkheartbeat],5m,&quot;ne&quot;,1) &gt; 0</expression>
+                                    <name>TDSQL scheduler({#SCHEDULER_NAME})主scheduler心跳异常(不存活)</name>
+                                    <priority>INFO</priority>
+                                </trigger_prototype>
+                            </trigger_prototypes>
+                        </item_prototype>
+                        <item_prototype>
+                            <uuid>f752baa7d7934842954a794861bc2a7d</uuid>
+                            <name>{#SCHEDULER_NAME}(scheduler mtime)</name>
+                            <key>tdsql.get_value[11,{#SCHEDULER_NAME},mtime]</key>
+                            <delay>3m</delay>
+                            <history>7d</history>
+                            <discover>NO_DISCOVER</discover>
+                            <units>timestamp</units>
+                            <description>监控指标上报时间</description>
+                            <trigger_prototypes>
+                                <trigger_prototype>
+                                    <uuid>de952e90dd584df4be4b5a6f07127468</uuid>
+                                    <expression>now() - last(/fm_tdsql/tdsql.get_value[11,{#SCHEDULER_NAME},mtime]) &gt; 600</expression>
+                                    <name>TDSQL scheduler({#SCHEDULER_NAME})监控指标上报延迟</name>
+                                    <priority>INFO</priority>
+                                </trigger_prototype>
+                            </trigger_prototypes>
+                        </item_prototype>
+                        <item_prototype>
+                            <uuid>f304fdefb5e84df69b41d6c09edf1170</uuid>
+                            <name>{#SCHEDULER_NAME}(scheduler scheduler_alive)</name>
+                            <key>tdsql.get_value[11,{#SCHEDULER_NAME},scheduler_alive]</key>
+                            <delay>30s</delay>
+                            <value_type>FLOAT</value_type>
+                            <description>存活标识</description>
+                            <trigger_prototypes>
+                                <trigger_prototype>
+                                    <uuid>17d794e9364147ef84d1f952c12ec513</uuid>
+                                    <expression>count(/fm_tdsql/tdsql.get_value[11,{#SCHEDULER_NAME},scheduler_alive],5m,&quot;ne&quot;,0) &gt; 0</expression>
+                                    <name>TDSQL scheduler({#SCHEDULER_NAME})存活状态异常</name>
+                                    <priority>INFO</priority>
+                                </trigger_prototype>
+                            </trigger_prototypes>
+                        </item_prototype>
+                        <item_prototype>
+                            <uuid>8afdccfc0ad741bdbdc02aa488d687c2</uuid>
+                            <name>{#SCHEDULER_NAME}(scheduler scheduler_distance_id)</name>
+                            <key>tdsql.get_value[11,{#SCHEDULER_NAME},scheduler_distance_id]</key>
+                            <delay>30s</delay>
+                            <value_type>FLOAT</value_type>
+                            <description>1分钟内发生过重启的标识</description>
+                            <trigger_prototypes>
+                                <trigger_prototype>
+                                    <uuid>4ca04abe9d72457d937e02193fc84404</uuid>
+                                    <expression>count(/fm_tdsql/tdsql.get_value[11,{#SCHEDULER_NAME},scheduler_distance_id],30m,&quot;ne&quot;,0) &gt; 0</expression>
+                                    <name>TDSQL scheduler({#SCHEDULER_NAME})发生重启</name>
+                                    <priority>INFO</priority>
+                                </trigger_prototype>
+                            </trigger_prototypes>
+                        </item_prototype>
+                    </item_prototypes>
+                </discovery_rule>
+                <discovery_rule>
+                    <uuid>11fdc25819604892ac83d17bd84252ee</uuid>
+                    <name>onlineddl_discovery</name>
+                    <key>tdsql.discovery[21]</key>
+                    <delay>30s</delay>
+                    <lifetime>7d</lifetime>
+                    <item_prototypes>
+                        <item_prototype>
+                            <uuid>1d809534106642d7925411a21ac0bc53</uuid>
+                            <name>{#ONLINEDDL_NAME}(onlineddl alive)</name>
+                            <key>tdsql.get_value[21,{#ONLINEDDL_NAME},alive]</key>
+                            <delay>30s</delay>
+                            <value_type>FLOAT</value_type>
+                            <description>存活标识</description>
+                            <trigger_prototypes>
+                                <trigger_prototype>
+                                    <uuid>61a8305544c24f9da001f84740a9341e</uuid>
+                                    <expression>count(/fm_tdsql/tdsql.get_value[21,{#ONLINEDDL_NAME},alive],30m,&quot;ne&quot;,1)&gt;0</expression>
+                                    <name>TDSQL onlineddl({#ONLINEDDL_NAME})存活状态异常</name>
+                                    <priority>INFO</priority>
+                                </trigger_prototype>
+                            </trigger_prototypes>
+                        </item_prototype>
+                        <item_prototype>
+                            <uuid>0056f539eb594454aa8d2a84f9128135</uuid>
+                            <name>{#ONLINEDDL_NAME}(onlineddl mtime)</name>
+                            <key>tdsql.get_value[21,{#ONLINEDDL_NAME},mtime]</key>
+                            <delay>3m</delay>
+                            <history>7d</history>
+                            <discover>NO_DISCOVER</discover>
+                            <units>timestamp</units>
+                            <description>监控指标上报时间</description>
+                            <trigger_prototypes>
+                                <trigger_prototype>
+                                    <uuid>c5acd65a65f34a11ac57d41fdfb5377d</uuid>
+                                    <expression>now() - last(/fm_tdsql/tdsql.get_value[21,{#ONLINEDDL_NAME},mtime]) &gt; 600</expression>
+                                    <name>TDSQL onlineddl({#ONLINEDDL_NAME})监控指标上报延迟</name>
+                                    <priority>INFO</priority>
+                                </trigger_prototype>
+                            </trigger_prototypes>
+                        </item_prototype>
+                    </item_prototypes>
+                </discovery_rule>
+            </discovery_rules>
+        </template>
+    </templates>
+</zabbix_export>
