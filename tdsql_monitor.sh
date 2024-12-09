@@ -13,6 +13,7 @@ AUTH_KEY=2c605673c860f21f94cd26cb390bf671
 CLUSTER_KEY=tdsql_sk3fozaph
 
 
+:<<COMMENT
 ## instance metrics(19)
 MKEY_LIST_01=("status" "degrade_flag" "mysql_master_switch" "mtime" "rstate" "instance_name" \
               "clientName" "cluster_type" "groupname" "master_ip_port" "mysql_sum_alive" \
@@ -43,6 +44,33 @@ MKEY_LIST_11=("checkheartbeat" "mtime" "scheduler_distance_id" "scheduler_alive"
 
 ## online ddl metrics(2)
 MKEY_LIST_21=("alive" "mtime")
+COMMENT
+
+
+
+## instance metrics(7)
+MKEY_LIST_01=("status" "degrade_flag" "mysql_master_switch" "mtime" "rstate" "instance_name" \
+              "mysql_sum_alive")
+
+## txsql metrics(22)
+MKEY_LIST_02=("alive" "is_notsame" "backup_monitor_binlog" "backup_monitor_xtrabckup" \
+            "binlog_dir_usage" "data_dir_usage" "connect_usage" "conn_active" \
+            "conn_err_save" "cpu_usage" "mem_usage" "io_usage" "process_fh_usage" "processlist_slow_sql" \
+            "slave_delay" "slave_io_running" "slave_sql_running" \
+            "sqlasyn_state" "gtidIsSame" "rstate" "cluster_name" "set_name")
+
+## proxy metrics(5)
+MKEY_LIST_03=("alive" "conn_usage" "proxy_is_restart" "rstate" "cluster_name")
+
+## zookeeper metrics(2)
+MKEY_LIST_04=("alive" "master_switch")
+
+## scheduler metrics(3)
+MKEY_LIST_11=("checkheartbeat" "scheduler_distance_id" "scheduler_alive")
+
+## online ddl metrics(1)
+MKEY_LIST_21=("alive")
+
 
 
 ## internal use
@@ -178,6 +206,26 @@ then
     fi
 
     echo "$JSON_STR" >$MKEY_LIST_1_FILE
+
+
+    ## when the set is belong to a distributed instance, fill its "instance_name" with pmid's "instance_name"
+    GROUP_LIST=`cat $MKEY_LIST_1_FILE | jq '.data[] | select((.mkey == "instance_name") and (.mval == "") and (.pmid != "")) | .pmid' | sort | uniq`
+    if [ `echo "$GROUP_LIST" | wc -l` -gt 0 ]
+    then
+        INST_NAME=""
+        for i in `echo "$GROUP_LIST"`
+        do
+            INST_NAME=`cat $MKEY_LIST_1_FILE | jq ".data[] | select((.mkey == \"instance_name\") and (.mid == $i)) | .mval"`
+            i=`echo $i | sed 's|/|\\\/|g' | sed 's|/|\\\/|g'`
+            sed -i "s|\"pmid\":$i,\"mkey\":\"instance_name\",\"mval\":\"\",|\"pmid\":$i,\"mkey\":\"instance_name\",\"mval\":$INST_NAME,|g" $MKEY_LIST_1_FILE
+
+            if [ $? -ne 0 ]
+            then
+                echo "sed error" >&2
+                exit -1
+            fi
+        done
+    fi
 
 
     ## generate TDSQL instance whitelist and print it
