@@ -216,13 +216,16 @@ then
         for i in `echo "$GROUP_LIST"`
         do
             INST_NAME=`cat $MKEY_LIST_1_FILE | jq ".data[] | select((.mkey == \"instance_name\") and (.mid == $i)) | .mval"`
-            i=`echo $i | sed 's|/|\\\/|g' | sed 's|/|\\\/|g'`
-            sed -i "s|\"pmid\":$i,\"mkey\":\"instance_name\",\"mval\":\"\",|\"pmid\":$i,\"mkey\":\"instance_name\",\"mval\":$INST_NAME,|g" $MKEY_LIST_1_FILE
-
-            if [ $? -ne 0 ]
+            if [ "$INST_NAME" != "" ]
             then
-                echo "sed error" >&2
-                exit -1
+                i=`echo $i | sed 's|/|\\\/|g' | sed 's|/|\\\/|g'`
+                sed -i "s|\"pmid\":$i,\"mkey\":\"instance_name\",\"mval\":\"\",|\"pmid\":$i,\"mkey\":\"instance_name\",\"mval\":$INST_NAME,|g" $MKEY_LIST_1_FILE
+
+                if [ $? -ne 0 ]
+                then
+                    echo "sed error" >&2
+                    exit -1
+                fi
             fi
         done
     fi
