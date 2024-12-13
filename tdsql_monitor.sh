@@ -114,7 +114,7 @@ if [ `echo $MTYPE_NUM | sed -n '/^[1-9][0-9]*$/p'` ]
 then
     :
 else
-    echo '-t option must be a digit and greater than 0\n' >&2
+    echo '-t option must be a digit and greater than 0' >&2
     exit -1
 fi
 
@@ -123,14 +123,14 @@ fi
 curl --help >/dev/null
 if [ $? -ne 0 ]
 then
-    echo "curl command not found\n" >&2
+    echo "curl command not found" >&2
     exit -1
 fi
 
 jq --help >/dev/null
 if [ $? -ne 0 ]
 then
-    echo "jq command not found\n" >&2
+    echo "jq command not found" >&2
     exit -1
 fi
 
@@ -166,7 +166,7 @@ then
 
                 if [ $? -ne 0 ]
                 then
-                    echo "datetime convert to unix-timestamp error\n" >&2
+                    echo "datetime convert to unix-timestamp error" >&2
                     exit -1
                 fi
             fi
@@ -201,7 +201,7 @@ then
 
     if [ $? -ne 0 ]
     then
-        echo "curl mtype=1 failed\n" >&2
+        echo "curl mtype=1 failed" >&2
         exit -1
     fi
 
@@ -237,7 +237,7 @@ then
     then
         BLACKLIST=`cat $MKEY_LIST_1_FILE | jq '.data[] | select((.mkey == "rstate") and (.mval != "1")) | .mid' | sort | uniq`
     else
-        echo "$MKEY_LIST_1_FILE is empty\n" >&2
+        echo "$MKEY_LIST_1_FILE is empty" >&2
         exit -1
     fi
 
@@ -301,7 +301,7 @@ then
 
     if [ $? -ne 0 ]
     then
-        echo "curl mtype=2 failed\n" >&2
+        echo "curl mtype=2 failed" >&2
         exit -1
     fi
 
@@ -395,7 +395,7 @@ then
 
     if [ $? -ne 0 ]
     then
-        echo "curl mtype=3 failed\n" >&2
+        echo "curl mtype=3 failed" >&2
         exit -1
     fi
 
@@ -472,7 +472,7 @@ then
 
     if [ $? -ne 0 ]
     then
-        echo "curl mtype=4 failed\n" >&2
+        echo "curl mtype=4 failed" >&2
         exit -1
     fi
 
@@ -531,7 +531,7 @@ then
 
     if [ $? -ne 0 ]
     then
-        echo "curl mtype=11 failed\n" >&2
+        echo "curl mtype=11 failed" >&2
         exit -1
     fi
 
@@ -590,7 +590,7 @@ then
 
     if [ $? -ne 0 ]
     then
-        echo "curl mtype=21 failed\n" >&2
+        echo "curl mtype=21 failed" >&2
         exit -1
     fi
 
