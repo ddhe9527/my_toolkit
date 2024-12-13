@@ -5,8 +5,8 @@ zabbix_export:
       name: Templates/Databases
   templates:
     - uuid: de5986ff738d479395d65e953137a52e
-      template: fm_tdsql
-      name: fm_tdsql
+      template: heduoduo_test
+      name: heduoduo_test
       groups:
         - name: Templates/Databases
       discovery_rules:
@@ -51,7 +51,7 @@ zabbix_export:
               description: 强同步降级标识
               trigger_prototypes:
                 - uuid: 980324535f524304b83e57547edf9335
-                  expression: 'count(/fm_tdsql/tdsql.get_value[1,{#INSTANCE_NAME},degrade_flag],30m,"ne",0) > 0'
+                  expression: 'count(/heduoduo_test/tdsql.get_value[1,{#INSTANCE_NAME},degrade_flag],30m,"ne",0) > 0'
                   name: 'TDSQL{#DESC} instance({#INSTANCE_NAME})发生强同步退化'
                   priority: INFO
             - uuid: 5f70c96afa7243c080c1a568dba6c1d8
@@ -89,7 +89,7 @@ zabbix_export:
               description: 监控指标上报时间
               trigger_prototypes:
                 - uuid: ae4da8025d864c87b702fb28b0ca814d
-                  expression: 'now() - last(/fm_tdsql/tdsql.get_value[1,{#INSTANCE_NAME},mtime]) > 600'
+                  expression: 'now() - last(/heduoduo_test/tdsql.get_value[1,{#INSTANCE_NAME},mtime]) > 600'
                   name: 'TDSQL{#DESC} instance({#INSTANCE_NAME})监控指标上报延迟'
                   priority: INFO
             - uuid: d02b4d44ccde40958fd40fb4a4c73ed0
@@ -100,7 +100,7 @@ zabbix_export:
               description: 1分钟内发生过主从切换的标识
               trigger_prototypes:
                 - uuid: 695337c2d90444ab968a65dcedf87734
-                  expression: 'count(/fm_tdsql/tdsql.get_value[1,{#INSTANCE_NAME},mysql_master_switch],10m,"ne",0) > 0'
+                  expression: 'count(/heduoduo_test/tdsql.get_value[1,{#INSTANCE_NAME},mysql_master_switch],10m,"ne",0) > 0'
                   name: 'TDSQL{#DESC} instance({#INSTANCE_NAME})发生主从切换'
                   priority: INFO
             - uuid: 991ab0a98f9d446caa12f87275634dfe
@@ -111,7 +111,7 @@ zabbix_export:
               description: 所有存活txsql实例数量总和，0表示全部存活
               trigger_prototypes:
                 - uuid: ea2c4715021c48ac8cab182e0f84a5ef
-                  expression: 'count(/fm_tdsql/tdsql.get_value[1,{#INSTANCE_NAME},mysql_sum_alive],5m,"ne",0) > 0'
+                  expression: 'count(/heduoduo_test/tdsql.get_value[1,{#INSTANCE_NAME},mysql_sum_alive],5m,"ne",0) > 0'
                   name: 'TDSQL{#DESC} instance({#INSTANCE_NAME})存在"not alive"状态txsql'
                   priority: INFO
             - uuid: 9eaadf8929844073a256145d4108bdd5
@@ -128,14 +128,6 @@ zabbix_export:
               history: 7d
               discover: NO_DISCOVER
               description: 所有txsql主从复制SQL线程数量总和
-            - uuid: 42d3b561af0b4ea9be843f67e5b3ce5f
-              name: '{#DESC}{#INSTANCE_NAME}(instance oss_cpu)'
-              key: 'tdsql.get_value[1,{#INSTANCE_NAME},oss_cpu]'
-              delay: 1d
-              history: 7d
-              discover: NO_DISCOVER
-              units: '%'
-              description: 分配的CPU数量
             - uuid: c3d0f7e8b7f44924b08f56205b74c0d1
               name: '{#DESC}{#INSTANCE_NAME}(instance oss_data_disk)'
               key: 'tdsql.get_value[1,{#INSTANCE_NAME},oss_data_disk]'
@@ -175,7 +167,7 @@ zabbix_export:
               description: 实例状态标识
               trigger_prototypes:
                 - uuid: b81dcd8e5db747c499298d094a35f299
-                  expression: 'count(/fm_tdsql/tdsql.get_value[1,{#INSTANCE_NAME},status],5m,"ne",0) > 0'
+                  expression: 'count(/heduoduo_test/tdsql.get_value[1,{#INSTANCE_NAME},status],5m,"ne",0) > 0'
                   name: 'TDSQL{#DESC} instance({#INSTANCE_NAME})实例状态异常'
                   priority: INFO
         - uuid: 82e82c1bb7ff43a98e2ac7a30ce78681
@@ -184,6 +176,11 @@ zabbix_export:
           delay: 40s
           lifetime: 7d
           item_prototypes:
+            - uuid: a27e6327056b49a1bada85e6da311031
+              name: '{#DESC}/{#TXSQL_NAME}(txsql oss_cpu)'
+              key: 'tdsql.get_value[1,{#INSTANCE_NAME},oss_cpu,{#TXSQL_NAME}]'
+              delay: 4h
+              description: '给TXSQL实例分配的CPU核数，例如"400"表示4core'
             - uuid: 9d5aa264909e491bb8a9fb8189b06251
               name: '{#DESC}/{#TXSQL_NAME}(txsql active_thread_count)'
               key: 'tdsql.get_value[2,{#TXSQL_NAME},active_thread_count]'
@@ -191,7 +188,7 @@ zabbix_export:
               description: 当前活跃线程数
               trigger_prototypes:
                 - uuid: 8d699aee9f024715b9224b271bf19448
-                  expression: 'avg(/fm_tdsql/tdsql.get_value[2,{#TXSQL_NAME},active_thread_count],5m) > 50'
+                  expression: 'avg(/heduoduo_test/tdsql.get_value[2,{#TXSQL_NAME},active_thread_count],5m) > 50'
                   name: 'TDSQL{#DESC} txsql({#TXSQL_NAME})活跃线程数高'
                   priority: INFO
             - uuid: 997cfe8b935c45ef907bf8a524a45753
@@ -202,7 +199,7 @@ zabbix_export:
               description: 存活标识
               trigger_prototypes:
                 - uuid: 92a4a33dcbb54f8abfdac23c0bcd944b
-                  expression: 'count(/fm_tdsql/tdsql.get_value[2,{#TXSQL_NAME},alive],5m,"ne",0) > 0'
+                  expression: 'count(/heduoduo_test/tdsql.get_value[2,{#TXSQL_NAME},alive],5m,"ne",0) > 0'
                   name: 'TDSQL{#DESC} txsql({#TXSQL_NAME})存活状态异常'
                   priority: INFO
             - uuid: 3343053935564fb78dbd8cbf043872bd
@@ -214,7 +211,7 @@ zabbix_export:
               description: binlog备份成功标识
               trigger_prototypes:
                 - uuid: 4ea133541fc04f56becb84b16cf7540c
-                  expression: 'find(/fm_tdsql/tdsql.get_value[2,{#TXSQL_NAME},backup_monitor_binlog],1h,"like","-1") = 1'
+                  expression: 'find(/heduoduo_test/tdsql.get_value[2,{#TXSQL_NAME},backup_monitor_binlog],1h,"like","-1") = 1'
                   name: 'TDSQL{#DESC} txsql({#TXSQL_NAME})binlog备份异常'
                   priority: INFO
             - uuid: 98a6bf6c1dca41159fbe01ed5553aa72
@@ -226,7 +223,7 @@ zabbix_export:
               description: xtrabackup备份成功标识
               trigger_prototypes:
                 - uuid: edd3d1d13ed34fc99c3b423a03a70bd6
-                  expression: 'find(/fm_tdsql/tdsql.get_value[2,{#TXSQL_NAME},backup_monitor_xtrabckup],1h,"like","-1") = 1'
+                  expression: 'find(/heduoduo_test/tdsql.get_value[2,{#TXSQL_NAME},backup_monitor_xtrabckup],1h,"like","-1") = 1'
                   name: 'TDSQL{#DESC} txsql({#TXSQL_NAME})xtrabackup备份异常'
                   priority: INFO
             - uuid: 30b6e985f72f4a109b0ed05a48527fb2
@@ -246,7 +243,7 @@ zabbix_export:
               description: 日志盘使用率
               trigger_prototypes:
                 - uuid: 530cf70574b64ff08627f28195ff7687
-                  expression: 'avg(/fm_tdsql/tdsql.get_value[2,{#TXSQL_NAME},binlog_dir_usage],5m) > 85'
+                  expression: 'avg(/heduoduo_test/tdsql.get_value[2,{#TXSQL_NAME},binlog_dir_usage],5m) > 85'
                   name: 'TDSQL{#DESC} txsql({#TXSQL_NAME})日志盘使用率高'
                   priority: INFO
             - uuid: 6f24ecb5f6664524879c0d9bdf16b966
@@ -273,7 +270,7 @@ zabbix_export:
               description: 连接数使用率
               trigger_prototypes:
                 - uuid: 2857ff005e4b4050a000df03175952ea
-                  expression: 'avg(/fm_tdsql/tdsql.get_value[2,{#TXSQL_NAME},connect_usage],5m) > 85'
+                  expression: 'avg(/heduoduo_test/tdsql.get_value[2,{#TXSQL_NAME},connect_usage],5m) > 85'
                   name: 'TDSQL{#DESC} txsql({#TXSQL_NAME})连接数使用率高'
                   priority: INFO
             - uuid: 694b647cfc8e4de08c84c7f64fc83e8d
@@ -282,7 +279,7 @@ zabbix_export:
               description: 当前活跃连接数
               trigger_prototypes:
                 - uuid: 3074713b73a94a4e8a1fb041d9e0cec0
-                  expression: 'avg(/fm_tdsql/tdsql.get_value[2,{#TXSQL_NAME},conn_active],5m) > 100'
+                  expression: 'avg(/heduoduo_test/tdsql.get_value[2,{#TXSQL_NAME},conn_active],5m) > 100'
                   name: 'TDSQL{#DESC} txsql({#TXSQL_NAME})活跃连接数高'
                   priority: INFO
             - uuid: d7cef44ab15e482eba91a10f23f273f6
@@ -293,7 +290,7 @@ zabbix_export:
               description: TCP连接状态
               trigger_prototypes:
                 - uuid: 31dae961e32a459c890316ee1a3ed7ed
-                  expression: 'count(/fm_tdsql/tdsql.get_value[2,{#TXSQL_NAME},conn_err_save],5m,"ne",0) > 0'
+                  expression: 'count(/heduoduo_test/tdsql.get_value[2,{#TXSQL_NAME},conn_err_save],5m,"ne",0) > 0'
                   name: 'TDSQL{#DESC} txsql({#TXSQL_NAME})TCP连接状态异常'
                   priority: INFO
             - uuid: da46e5126d6a46f6806eddf60e092cbe
@@ -314,11 +311,6 @@ zabbix_export:
               value_type: FLOAT
               units: '%'
               description: CPU使用率
-              trigger_prototypes:
-                - uuid: df64311934f8462888ade408f53d1858
-                  expression: 'avg(/fm_tdsql/tdsql.get_value[2,{#TXSQL_NAME},cpu_usage],5m) > 85'
-                  name: 'TDSQL{#DESC} txsql({#TXSQL_NAME})CPU使用率高'
-                  priority: INFO
             - uuid: 83a11ccaabed4c5a852c8ef3278a83be
               name: '{#DESC}/{#TXSQL_NAME}(txsql data_dir_total)'
               key: 'tdsql.get_value[2,{#TXSQL_NAME},data_dir_total]'
@@ -336,7 +328,7 @@ zabbix_export:
               description: 数据盘使用率
               trigger_prototypes:
                 - uuid: 9f626c4348c24928a6bb20bb158cd53e
-                  expression: 'avg(/fm_tdsql/tdsql.get_value[2,{#TXSQL_NAME},data_dir_usage],5m) > 85'
+                  expression: 'avg(/heduoduo_test/tdsql.get_value[2,{#TXSQL_NAME},data_dir_usage],5m) > 85'
                   name: 'TDSQL{#DESC} txsql({#TXSQL_NAME})数据盘使用率高'
                   priority: INFO
             - uuid: 7b395edaeb724a2b9f5955eb11ada2d6
@@ -355,7 +347,7 @@ zabbix_export:
               description: GTID是否一致
               trigger_prototypes:
                 - uuid: 658161b4d9614f18bc756c695d000d09
-                  expression: 'find(/fm_tdsql/tdsql.get_value[2,{#TXSQL_NAME},gtidIsSame],30m,"eq",0) = 1'
+                  expression: 'find(/heduoduo_test/tdsql.get_value[2,{#TXSQL_NAME},gtidIsSame],30m,"eq",0) = 1'
                   name: 'TDSQL{#DESC} txsql({#TXSQL_NAME})GTID不一致'
                   priority: INFO
             - uuid: 9231904be3b24c2fba27c72278acd0ae
@@ -366,7 +358,7 @@ zabbix_export:
               description: I/O延迟
               trigger_prototypes:
                 - uuid: eeb692882480419c9ed7768b69e93e08
-                  expression: 'avg(/fm_tdsql/tdsql.get_value[2,{#TXSQL_NAME},iodelay],5m) > 50'
+                  expression: 'avg(/heduoduo_test/tdsql.get_value[2,{#TXSQL_NAME},iodelay],5m) > 50'
                   name: 'TDSQL{#DESC} txsql({#TXSQL_NAME})IO延迟高'
                   priority: INFO
             - uuid: 4210e396a6ac4ea0baf3bcd75f6fc7be
@@ -378,8 +370,8 @@ zabbix_export:
               description: I/O使用率
               trigger_prototypes:
                 - uuid: 91c5fe96f198494fafc51d74c2031193
-                  expression: 'avg(/fm_tdsql/tdsql.get_value[2,{#TXSQL_NAME},io_usage],5m) > 75'
-                  name: 'TDSQL{#DESC} txsql({#TXSQL_NAME})IO使用率高'
+                  expression: 'avg(/heduoduo_test/tdsql.get_value[2,{#TXSQL_NAME},io_usage],5m) > 80'
+                  name: 'TDSQL{#DESC} txsql({#TXSQL_NAME})磁盘I/O使用率高'
                   priority: INFO
             - uuid: 6df0445cc41d4c23abb8805629187e26
               name: '{#DESC}/{#TXSQL_NAME}(txsql ismaster)'
@@ -399,7 +391,7 @@ zabbix_export:
               description: 重启标识
               trigger_prototypes:
                 - uuid: b117f086fa5f456a833ab631cb2cca70
-                  expression: 'find(/fm_tdsql/tdsql.get_value[2,{#TXSQL_NAME},is_notsame],30m,"like","false") = 1 and last(/fm_tdsql/tdsql.get_value[2,{#TXSQL_NAME},is_notsame]) = "true"'
+                  expression: 'find(/heduoduo_test/tdsql.get_value[2,{#TXSQL_NAME},is_notsame],30m,"like","false") = 1 and last(/heduoduo_test/tdsql.get_value[2,{#TXSQL_NAME},is_notsame]) = "true"'
                   name: 'TDSQL{#DESC} txsql({#TXSQL_NAME})发生重启'
                   priority: INFO
             - uuid: 141515745b984b8c95465415bbb6313f
@@ -419,7 +411,7 @@ zabbix_export:
               description: 内存使用率
               trigger_prototypes:
                 - uuid: 2b800a5ce4a0445885e2c4bbb1a8de03
-                  expression: 'avg(/fm_tdsql/tdsql.get_value[2,{#TXSQL_NAME},mem_usage],5m) > 95'
+                  expression: 'avg(/heduoduo_test/tdsql.get_value[2,{#TXSQL_NAME},mem_usage],5m) > 95'
                   name: 'TDSQL{#DESC} txsql({#TXSQL_NAME})内存使用率高'
                   priority: INFO
             - uuid: 8c1f80ffc65e47139ea1cadf7692a6db
@@ -440,7 +432,7 @@ zabbix_export:
               description: 监控指标上报时间
               trigger_prototypes:
                 - uuid: b0f541d8755643b1864ce385f58d49b6
-                  expression: 'now() - last(/fm_tdsql/tdsql.get_value[2,{#TXSQL_NAME},mtime]) > 600'
+                  expression: 'now() - last(/heduoduo_test/tdsql.get_value[2,{#TXSQL_NAME},mtime]) > 600'
                   name: 'TDSQL{#DESC} txsql({#TXSQL_NAME})监控指标上报延迟'
                   priority: INFO
             - uuid: 94d936e9e94e47e698ddcadc5d4cb8f8
@@ -450,7 +442,7 @@ zabbix_export:
               description: 当前PROCESSLIST中的慢查询数量
               trigger_prototypes:
                 - uuid: 1520293f60744546a1dc09f5f536c59c
-                  expression: 'last(/fm_tdsql/tdsql.get_value[2,{#TXSQL_NAME},processlist_slow_sql]) > 10'
+                  expression: 'last(/heduoduo_test/tdsql.get_value[2,{#TXSQL_NAME},processlist_slow_sql]) > 10'
                   name: 'TDSQL{#DESC} txsql({#TXSQL_NAME})PROCESSLIST中慢查询数量多'
                   priority: INFO
             - uuid: 5883532f34f14cfeaecb8b082d9beba3
@@ -462,7 +454,7 @@ zabbix_export:
               description: 进程文件句柄上限配置
               trigger_prototypes:
                 - uuid: a23b9d04a7604735866e48119b3d9916
-                  expression: 'last(/fm_tdsql/tdsql.get_value[2,{#TXSQL_NAME},process_fh_max]) < 10000'
+                  expression: 'last(/heduoduo_test/tdsql.get_value[2,{#TXSQL_NAME},process_fh_max]) < 10000'
                   name: 'TDSQL{#DESC} txsql({#TXSQL_NAME})DB进程文件句柄配置低'
                   priority: INFO
             - uuid: 37b9ca66a65b44ebb2e8481c995c3656
@@ -474,7 +466,7 @@ zabbix_export:
               description: 文件句柄使用率
               trigger_prototypes:
                 - uuid: 7ff3a851fa734027bff69e10a3838fea
-                  expression: 'avg(/fm_tdsql/tdsql.get_value[2,{#TXSQL_NAME},process_fh_usage],5m) > 80'
+                  expression: 'avg(/heduoduo_test/tdsql.get_value[2,{#TXSQL_NAME},process_fh_usage],5m) > 80'
                   name: 'TDSQL{#DESC} txsql({#TXSQL_NAME})文件句柄使用率高'
                   priority: INFO
             - uuid: 0fc003251b634a7bad7a2bd7f983b993
@@ -505,7 +497,7 @@ zabbix_export:
               description: 从库延迟
               trigger_prototypes:
                 - uuid: 7f08b115c9d44c6a9d4e6883a8a8be47
-                  expression: 'avg(/fm_tdsql/tdsql.get_value[2,{#TXSQL_NAME},slave_delay],5m) > 1800'
+                  expression: 'avg(/heduoduo_test/tdsql.get_value[2,{#TXSQL_NAME},slave_delay],5m) > 1800'
                   name: 'TDSQL{#DESC} txsql({#TXSQL_NAME})主从复制延迟高'
                   priority: INFO
             - uuid: 65ad6585bcf94bd6b621f0d0185ce678
@@ -523,7 +515,7 @@ zabbix_export:
               description: 主从复制IO线程是否处于RUNNING状态
               trigger_prototypes:
                 - uuid: d3e3fbb4e4f348a5b3d90a240dc20fc0
-                  expression: 'count(/fm_tdsql/tdsql.get_value[2,{#TXSQL_NAME},slave_io_running],10m,"eq",0) > 0'
+                  expression: 'count(/heduoduo_test/tdsql.get_value[2,{#TXSQL_NAME},slave_io_running],10m,"eq",0) > 0'
                   name: 'TDSQL{#DESC} txsql({#TXSQL_NAME})主从复制IO线程异常'
                   priority: INFO
             - uuid: 818e80bad6324ef0afe7b34fdce1ace9
@@ -541,7 +533,7 @@ zabbix_export:
               description: 主从复制SQL线程是否处于RUNNING状态
               trigger_prototypes:
                 - uuid: 57efbbffc4e34bf4b08a17d9e47e69a4
-                  expression: 'count(/fm_tdsql/tdsql.get_value[2,{#TXSQL_NAME},slave_sql_running],10m,"eq",0) > 0'
+                  expression: 'count(/heduoduo_test/tdsql.get_value[2,{#TXSQL_NAME},slave_sql_running],10m,"eq",0) > 0'
                   name: 'TDSQL{#DESC} txsql({#TXSQL_NAME})主从复制SQL线程异常'
                   priority: INFO
             - uuid: 907d6f68fe444f6fa31ef738056fdaca
@@ -553,7 +545,7 @@ zabbix_export:
               description: 慢查询比率
               trigger_prototypes:
                 - uuid: eee6a9d543b342a9a972e5a242c0e525
-                  expression: 'avg(/fm_tdsql/tdsql.get_value[2,{#TXSQL_NAME},slow_query_rate],5m) > 20'
+                  expression: 'avg(/heduoduo_test/tdsql.get_value[2,{#TXSQL_NAME},slow_query_rate],5m) > 20'
                   name: 'TDSQL{#DESC} txsql({#TXSQL_NAME})慢查询比率高'
                   priority: INFO
             - uuid: bce1c9d6748040beb8e09569b87b2b74
@@ -565,7 +557,7 @@ zabbix_export:
               description: 当前强同步状态与强同步配置是否一致
               trigger_prototypes:
                 - uuid: adffe752ffae4bb6803c546585219ef0
-                  expression: 'find(/fm_tdsql/tdsql.get_value[2,{#TXSQL_NAME},sqlasyn_state],30m,"like","false") = 1'
+                  expression: 'find(/heduoduo_test/tdsql.get_value[2,{#TXSQL_NAME},sqlasyn_state],30m,"like","false") = 1'
                   name: 'TDSQL{#DESC} txsql({#TXSQL_NAME})强同步状态异常'
                   priority: INFO
             - uuid: 0cffed12acc4481d8d53f40ef3f2a361
@@ -575,9 +567,14 @@ zabbix_export:
               description: 当前出现waiting的线程数
               trigger_prototypes:
                 - uuid: 163434637d2b468092ad4f69abf1b8f8
-                  expression: 'avg(/fm_tdsql/tdsql.get_value[2,{#TXSQL_NAME},waiting_thread_count],5m) > 50'
+                  expression: 'avg(/heduoduo_test/tdsql.get_value[2,{#TXSQL_NAME},waiting_thread_count],5m) > 50'
                   name: 'TDSQL{#DESC} txsql({#TXSQL_NAME})等待线程数高'
                   priority: INFO
+          trigger_prototypes:
+            - uuid: df64311934f8462888ade408f53d1858
+              expression: 'avg(/heduoduo_test/tdsql.get_value[2,{#TXSQL_NAME},cpu_usage],5m) / avg(/heduoduo_test/tdsql.get_value[1,{#INSTANCE_NAME},oss_cpu,{#TXSQL_NAME}],5m) > 0.9'
+              name: 'TDSQL{#DESC} txsql({#TXSQL_NAME})CPU使用率高'
+              priority: INFO
         - uuid: 51d3a4c74e234c3ca404e3c581919f42
           name: proxy_discovery
           key: 'tdsql.discovery[3]'
@@ -594,7 +591,7 @@ zabbix_export:
               description: 存活标识
               trigger_prototypes:
                 - uuid: b2229354a6d34e6b8a1d950e07573dd8
-                  expression: 'find(/fm_tdsql/tdsql.get_value[3,{#PROXY_NAME},alive],5m,"like","false") = 1'
+                  expression: 'find(/heduoduo_test/tdsql.get_value[3,{#PROXY_NAME},alive],5m,"like","false") = 1'
                   name: 'TDSQL{#DESC} proxy({#PROXY_NAME})存活状态异常'
                   priority: INFO
             - uuid: 6b436bd9c8fa4af79164171e201f5bf2
@@ -625,7 +622,7 @@ zabbix_export:
               description: 已使用连接数百分比
               trigger_prototypes:
                 - uuid: f6cdfb9f3d774553a7ea1e75e7f94343
-                  expression: 'avg(/fm_tdsql/tdsql.get_value[3,{#PROXY_NAME},conn_usage],5m) > 80'
+                  expression: 'avg(/heduoduo_test/tdsql.get_value[3,{#PROXY_NAME},conn_usage],5m) > 80'
                   name: 'TDSQL{#DESC} proxy({#PROXY_NAME})连接数使用率高'
                   priority: INFO
             - uuid: 8a012fe240e7494f9ee52877bcb49e39
@@ -654,7 +651,7 @@ zabbix_export:
               description: 监控指标上报时间
               trigger_prototypes:
                 - uuid: c568e8edda784a53aa9709f26675fe03
-                  expression: 'now() - last(/fm_tdsql/tdsql.get_value[3,{#PROXY_NAME},mtime]) > 600'
+                  expression: 'now() - last(/heduoduo_test/tdsql.get_value[3,{#PROXY_NAME},mtime]) > 600'
                   name: 'TDSQL{#DESC} proxy({#PROXY_NAME})监控指标上报延迟'
                   priority: INFO
             - uuid: 7f57a53325194e3e8b26a81e48051db1
@@ -671,7 +668,7 @@ zabbix_export:
               description: CPU使用率
               trigger_prototypes:
                 - uuid: 653533613c114feeaf6c0a7824de114c
-                  expression: 'avg(/fm_tdsql/tdsql.get_value[3,{#PROXY_NAME},proxy_cpu_usage],5m) > 80'
+                  expression: 'avg(/heduoduo_test/tdsql.get_value[3,{#PROXY_NAME},proxy_cpu_usage],5m) > 80'
                   name: 'TDSQL{#DESC} proxy({#PROXY_NAME})CPU使用率高'
                   priority: INFO
             - uuid: e505303d91ca43c1a14af2e9056b3800
@@ -682,7 +679,7 @@ zabbix_export:
               description: 1分钟内发生过重启的标识
               trigger_prototypes:
                 - uuid: c0dc7f072ee14f9ebec242b5246580bd
-                  expression: 'count(/fm_tdsql/tdsql.get_value[3,{#PROXY_NAME},proxy_is_restart],30m,"ne",0) > 0'
+                  expression: 'count(/heduoduo_test/tdsql.get_value[3,{#PROXY_NAME},proxy_is_restart],30m,"ne",0) > 0'
                   name: 'TDSQL{#DESC} proxy({#PROXY_NAME})发生重启'
                   priority: INFO
             - uuid: 1c2bb94d51cc4c839994bc1e427d320d
@@ -712,7 +709,7 @@ zabbix_export:
               description: 存活标识
               trigger_prototypes:
                 - uuid: 197c6734d05c4bddba568a3a6a1e4c94
-                  expression: 'find(/fm_tdsql/tdsql.get_value[4,{#ZKNODE_NAME},alive],5m,"like","false") = 1'
+                  expression: 'find(/heduoduo_test/tdsql.get_value[4,{#ZKNODE_NAME},alive],5m,"like","false") = 1'
                   name: 'TDSQL zookeeper({#ZKNODE_NAME})存活状态异常'
                   priority: INFO
             - uuid: 1cb9c3a4d10c4a42bb71f107dacb0440
@@ -723,7 +720,7 @@ zabbix_export:
               description: leader发生过切换的标识
               trigger_prototypes:
                 - uuid: fd00c334458443c9b2da0da1b3deceab
-                  expression: 'count(/fm_tdsql/tdsql.get_value[4,{#ZKNODE_NAME},master_switch],30m,"ne",0) > 0'
+                  expression: 'count(/heduoduo_test/tdsql.get_value[4,{#ZKNODE_NAME},master_switch],30m,"ne",0) > 0'
                   name: 'TDSQL zookeeper({#ZKNODE_NAME})发生leader切换'
                   priority: INFO
             - uuid: 35451a799a0f475a8f5f6b302b6d9718
@@ -745,7 +742,7 @@ zabbix_export:
               description: 监控指标上报时间
               trigger_prototypes:
                 - uuid: aeebbc6556f847f2b6505933e93e5582
-                  expression: 'now() - last(/fm_tdsql/tdsql.get_value[4,{#ZKNODE_NAME},mtime]) > 600'
+                  expression: 'now() - last(/heduoduo_test/tdsql.get_value[4,{#ZKNODE_NAME},mtime]) > 600'
                   name: 'TDSQL zookeeper({#ZKNODE_NAME})监控指标上报延迟'
                   priority: INFO
             - uuid: 3515d97a8f0843eb8fbec3d27e68979b
@@ -758,7 +755,7 @@ zabbix_export:
               description: ZK平均响应延迟
               trigger_prototypes:
                 - uuid: 90b61623c0de4fc1a73e2ec4c3170113
-                  expression: 'avg(/fm_tdsql/tdsql.get_value[4,{#ZKNODE_NAME},zk_avg_latency],5m) > 10'
+                  expression: 'avg(/heduoduo_test/tdsql.get_value[4,{#ZKNODE_NAME},zk_avg_latency],5m) > 10'
                   name: 'TDSQL zookeeper({#ZKNODE_NAME})请求响应延迟过高'
                   priority: INFO
             - uuid: f9ba3f844e59432a8b8223e828d68af7
@@ -804,7 +801,7 @@ zabbix_export:
               description: 主scheduler的心跳
               trigger_prototypes:
                 - uuid: 750155d4794f4dd2b72e50e31e354ce1
-                  expression: 'count(/fm_tdsql/tdsql.get_value[11,{#SCHEDULER_NAME},checkheartbeat],5m,"ne",1) > 0'
+                  expression: 'count(/heduoduo_test/tdsql.get_value[11,{#SCHEDULER_NAME},checkheartbeat],5m,"ne",1) > 0'
                   name: 'TDSQL scheduler({#SCHEDULER_NAME})主scheduler心跳异常(不存活)'
                   priority: INFO
             - uuid: f752baa7d7934842954a794861bc2a7d
@@ -817,7 +814,7 @@ zabbix_export:
               description: 监控指标上报时间
               trigger_prototypes:
                 - uuid: de952e90dd584df4be4b5a6f07127468
-                  expression: 'now() - last(/fm_tdsql/tdsql.get_value[11,{#SCHEDULER_NAME},mtime]) > 600'
+                  expression: 'now() - last(/heduoduo_test/tdsql.get_value[11,{#SCHEDULER_NAME},mtime]) > 600'
                   name: 'TDSQL scheduler({#SCHEDULER_NAME})监控指标上报延迟'
                   priority: INFO
             - uuid: f304fdefb5e84df69b41d6c09edf1170
@@ -828,7 +825,7 @@ zabbix_export:
               description: 存活标识
               trigger_prototypes:
                 - uuid: 17d794e9364147ef84d1f952c12ec513
-                  expression: 'count(/fm_tdsql/tdsql.get_value[11,{#SCHEDULER_NAME},scheduler_alive],5m,"ne",0) > 0'
+                  expression: 'count(/heduoduo_test/tdsql.get_value[11,{#SCHEDULER_NAME},scheduler_alive],5m,"ne",0) > 0'
                   name: 'TDSQL scheduler({#SCHEDULER_NAME})存活状态异常'
                   priority: INFO
             - uuid: 8afdccfc0ad741bdbdc02aa488d687c2
@@ -839,7 +836,7 @@ zabbix_export:
               description: 1分钟内发生过重启的标识
               trigger_prototypes:
                 - uuid: 4ca04abe9d72457d937e02193fc84404
-                  expression: 'count(/fm_tdsql/tdsql.get_value[11,{#SCHEDULER_NAME},scheduler_distance_id],30m,"ne",0) > 0'
+                  expression: 'count(/heduoduo_test/tdsql.get_value[11,{#SCHEDULER_NAME},scheduler_distance_id],30m,"ne",0) > 0'
                   name: 'TDSQL scheduler({#SCHEDULER_NAME})发生重启'
                   priority: INFO
         - uuid: 11fdc25819604892ac83d17bd84252ee
@@ -856,7 +853,7 @@ zabbix_export:
               description: 存活标识
               trigger_prototypes:
                 - uuid: 61a8305544c24f9da001f84740a9341e
-                  expression: 'count(/fm_tdsql/tdsql.get_value[21,{#ONLINEDDL_NAME},alive],30m,"ne",1)>0'
+                  expression: 'count(/heduoduo_test/tdsql.get_value[21,{#ONLINEDDL_NAME},alive],30m,"ne",1)>0'
                   name: 'TDSQL onlineddl({#ONLINEDDL_NAME})存活状态异常'
                   priority: INFO
             - uuid: 0056f539eb594454aa8d2a84f9128135
@@ -869,6 +866,6 @@ zabbix_export:
               description: 监控指标上报时间
               trigger_prototypes:
                 - uuid: c5acd65a65f34a11ac57d41fdfb5377d
-                  expression: 'now() - last(/fm_tdsql/tdsql.get_value[21,{#ONLINEDDL_NAME},mtime]) > 600'
+                  expression: 'now() - last(/heduoduo_test/tdsql.get_value[21,{#ONLINEDDL_NAME},mtime]) > 600'
                   name: 'TDSQL onlineddl({#ONLINEDDL_NAME})监控指标上报延迟'
                   priority: INFO

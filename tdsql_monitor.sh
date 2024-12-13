@@ -48,9 +48,9 @@ COMMENT
 
 
 
-## instance metrics(7)
+## instance metrics(8)
 MKEY_LIST_01=("status" "degrade_flag" "mysql_master_switch" "mtime" "rstate" "instance_name" \
-              "mysql_sum_alive")
+              "mysql_sum_alive" "oss_cpu")
 
 ## txsql metrics(22)
 MKEY_LIST_02=("alive" "is_notsame" "backup_monitor_binlog" "backup_monitor_xtrabckup" \
@@ -342,7 +342,8 @@ then
             INSTANCE_NAME=`cat $MKEY_LIST_2_FILE | jq ".data[] | select ($JQ_STR) |select((.mid == $i) and (.mkey == \"cluster_name\")) | .mval"`
             DESC=`cat $WHITELIST_FILE | jq ".data[] | select(.\"{#INSTANCE_NAME}\" == $INSTANCE_NAME) | .\"{#DESC}\""`
             echo -n '{"{#TXSQL_NAME}":'$i','
-            echo -n '"{#DESC}":'$DESC'}'
+            echo -n '"{#DESC}":'$DESC','
+            echo -n '"{#INSTANCE_NAME}":'$INSTANCE_NAME'}'
             IDX=`expr $IDX + 1`
             if [ $IDX -lt $CNT ]
             then
