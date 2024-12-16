@@ -24,7 +24,7 @@ MKEY_LIST_01=("status" "degrade_flag" "mysql_master_switch" "mtime" "rstate" "in
 MKEY_LIST_02=("alive" "is_notsame" "backup_monitor_binlog" "backup_monitor_xtrabckup" \
             "binlog_dir_usage" "data_dir_usage" "connect_usage" "conn_active" \
             "conn_err_save" "cpu_usage" "mem_usage" "io_usage" "iodelay" "process_fh_max" \
-            "process_fh_usage" "active_thread_count" "waiting_thread_count" "processlist_slow_sql" \
+            "process_fh_usage" "active_thread_count" "waiting_thread_count" "slow_query" \
             "slow_query_rate" "slave_delay" "slave_io_running" "slave_sql_running" "ismaster" \
             "sqlasyn_state" "gtidIsSame" "mtime" "rstate" "cluster_name" "set_name" "conn_max" \
             "binlog_dir_total" "binlog_dir_used" "conn_total" "data_dir_total" "data_dir_used" \
@@ -55,7 +55,7 @@ MKEY_LIST_01=("status" "degrade_flag" "mysql_master_switch" "mtime" "rstate" "in
 ## txsql metrics(22)
 MKEY_LIST_02=("alive" "is_notsame" "backup_monitor_binlog" "backup_monitor_xtrabckup" \
             "binlog_dir_usage" "data_dir_usage" "connect_usage" "conn_active" \
-            "conn_err_save" "cpu_usage" "mem_usage" "io_usage" "process_fh_usage" "processlist_slow_sql" \
+            "conn_err_save" "cpu_usage" "mem_usage" "io_usage" "process_fh_usage" "slow_query" \
             "slave_delay" "slave_io_running" "slave_sql_running" \
             "sqlasyn_state" "gtidIsSame" "rstate" "cluster_name" "set_name")
 
