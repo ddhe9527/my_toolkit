@@ -52,9 +52,9 @@ COMMENT
 MKEY_LIST_01=("status" "degrade_flag" "mysql_master_switch" "mtime" "rstate" "instance_name" \
               "mysql_sum_alive" "oss_cpu")
 
-## txsql metrics(22)
+## txsql metrics(23)
 MKEY_LIST_02=("alive" "is_notsame" "backup_monitor_binlog" "backup_monitor_xtrabckup" \
-            "binlog_dir_usage" "data_dir_usage" "connect_usage" "conn_active" \
+            "binlog_dir_usage" "data_dir_usage" "connect_usage" "conn_active" "iodelay" \
             "conn_err_save" "cpu_usage" "mem_usage" "io_usage" "process_fh_usage" "slow_query" \
             "slave_delay" "slave_io_running" "slave_sql_running" \
             "sqlasyn_state" "gtidIsSame" "rstate" "cluster_name" "set_name")
