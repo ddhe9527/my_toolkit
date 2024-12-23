@@ -10,8 +10,8 @@
     <templates>
         <template>
             <uuid>de5986ff738d479395d65e953137a52e</uuid>
-            <template>heduoduo_test</template>
-            <name>heduoduo_test</name>
+            <template>fm_tdsql</template>
+            <name>fm_tdsql</name>
             <groups>
                 <group>
                     <name>Templates/Databases</name>
@@ -68,9 +68,9 @@
                             <trigger_prototypes>
                                 <trigger_prototype>
                                     <uuid>980324535f524304b83e57547edf9335</uuid>
-                                    <expression>count(/heduoduo_test/tdsql.get_value[1,{#INSTANCE_NAME},degrade_flag],30m,&quot;ne&quot;,0) &gt; 0</expression>
+                                    <expression>count(/fm_tdsql/tdsql.get_value[1,{#INSTANCE_NAME},degrade_flag],30m,&quot;ne&quot;,0) &gt; 0</expression>
                                     <name>TDSQL{#DESC} instance({#INSTANCE_NAME})发生强同步退化</name>
-                                    <priority>INFO</priority>
+                                    <priority>AVERAGE</priority>
                                 </trigger_prototype>
                             </trigger_prototypes>
                         </item_prototype>
@@ -117,9 +117,9 @@
                             <trigger_prototypes>
                                 <trigger_prototype>
                                     <uuid>ae4da8025d864c87b702fb28b0ca814d</uuid>
-                                    <expression>now() - last(/heduoduo_test/tdsql.get_value[1,{#INSTANCE_NAME},mtime]) &gt; 600</expression>
+                                    <expression>now() - last(/fm_tdsql/tdsql.get_value[1,{#INSTANCE_NAME},mtime]) &gt; 600</expression>
                                     <name>TDSQL{#DESC} instance({#INSTANCE_NAME})监控指标上报延迟</name>
-                                    <priority>INFO</priority>
+                                    <priority>WARNING</priority>
                                 </trigger_prototype>
                             </trigger_prototypes>
                         </item_prototype>
@@ -133,9 +133,9 @@
                             <trigger_prototypes>
                                 <trigger_prototype>
                                     <uuid>695337c2d90444ab968a65dcedf87734</uuid>
-                                    <expression>count(/heduoduo_test/tdsql.get_value[1,{#INSTANCE_NAME},mysql_master_switch],10m,&quot;ne&quot;,0) &gt; 0</expression>
+                                    <expression>count(/fm_tdsql/tdsql.get_value[1,{#INSTANCE_NAME},mysql_master_switch],10m,&quot;ne&quot;,0) &gt; 0</expression>
                                     <name>TDSQL{#DESC} instance({#INSTANCE_NAME})发生主从切换</name>
-                                    <priority>INFO</priority>
+                                    <priority>HIGH</priority>
                                 </trigger_prototype>
                             </trigger_prototypes>
                         </item_prototype>
@@ -149,9 +149,9 @@
                             <trigger_prototypes>
                                 <trigger_prototype>
                                     <uuid>ea2c4715021c48ac8cab182e0f84a5ef</uuid>
-                                    <expression>count(/heduoduo_test/tdsql.get_value[1,{#INSTANCE_NAME},mysql_sum_alive],5m,&quot;ne&quot;,0) &gt; 0</expression>
+                                    <expression>count(/fm_tdsql/tdsql.get_value[1,{#INSTANCE_NAME},mysql_sum_alive],5m,&quot;ne&quot;,0) &gt; 0</expression>
                                     <name>TDSQL{#DESC} instance({#INSTANCE_NAME})存在&quot;not alive&quot;状态txsql</name>
-                                    <priority>INFO</priority>
+                                    <priority>DISASTER</priority>
                                 </trigger_prototype>
                             </trigger_prototypes>
                         </item_prototype>
@@ -222,9 +222,9 @@
                             <trigger_prototypes>
                                 <trigger_prototype>
                                     <uuid>b81dcd8e5db747c499298d094a35f299</uuid>
-                                    <expression>count(/heduoduo_test/tdsql.get_value[1,{#INSTANCE_NAME},status],5m,&quot;ne&quot;,0) &gt; 0</expression>
+                                    <expression>count(/fm_tdsql/tdsql.get_value[1,{#INSTANCE_NAME},status],5m,&quot;ne&quot;,0) &gt; 0</expression>
                                     <name>TDSQL{#DESC} instance({#INSTANCE_NAME})实例状态异常</name>
-                                    <priority>INFO</priority>
+                                    <priority>HIGH</priority>
                                 </trigger_prototype>
                             </trigger_prototypes>
                         </item_prototype>
@@ -253,9 +253,9 @@
                             <trigger_prototypes>
                                 <trigger_prototype>
                                     <uuid>8d699aee9f024715b9224b271bf19448</uuid>
-                                    <expression>avg(/heduoduo_test/tdsql.get_value[2,{#TXSQL_NAME},active_thread_count],5m) &gt; 50</expression>
+                                    <expression>avg(/fm_tdsql/tdsql.get_value[2,{#TXSQL_NAME},active_thread_count],5m) &gt; 50</expression>
                                     <name>TDSQL{#DESC} txsql({#TXSQL_NAME})活跃线程数高</name>
-                                    <priority>INFO</priority>
+                                    <priority>WARNING</priority>
                                 </trigger_prototype>
                             </trigger_prototypes>
                         </item_prototype>
@@ -269,9 +269,9 @@
                             <trigger_prototypes>
                                 <trigger_prototype>
                                     <uuid>92a4a33dcbb54f8abfdac23c0bcd944b</uuid>
-                                    <expression>count(/heduoduo_test/tdsql.get_value[2,{#TXSQL_NAME},alive],5m,&quot;ne&quot;,0) &gt; 0</expression>
+                                    <expression>count(/fm_tdsql/tdsql.get_value[2,{#TXSQL_NAME},alive],5m,&quot;ne&quot;,0) &gt; 0</expression>
                                     <name>TDSQL{#DESC} txsql({#TXSQL_NAME})存活状态异常</name>
-                                    <priority>INFO</priority>
+                                    <priority>DISASTER</priority>
                                 </trigger_prototype>
                             </trigger_prototypes>
                         </item_prototype>
@@ -286,9 +286,9 @@
                             <trigger_prototypes>
                                 <trigger_prototype>
                                     <uuid>4ea133541fc04f56becb84b16cf7540c</uuid>
-                                    <expression>find(/heduoduo_test/tdsql.get_value[2,{#TXSQL_NAME},backup_monitor_binlog],1h,&quot;like&quot;,&quot;-1&quot;) = 1</expression>
+                                    <expression>find(/fm_tdsql/tdsql.get_value[2,{#TXSQL_NAME},backup_monitor_binlog],12h,&quot;like&quot;,&quot;-1&quot;) = 1</expression>
                                     <name>TDSQL{#DESC} txsql({#TXSQL_NAME})binlog备份异常</name>
-                                    <priority>INFO</priority>
+                                    <priority>WARNING</priority>
                                 </trigger_prototype>
                             </trigger_prototypes>
                         </item_prototype>
@@ -303,9 +303,9 @@
                             <trigger_prototypes>
                                 <trigger_prototype>
                                     <uuid>edd3d1d13ed34fc99c3b423a03a70bd6</uuid>
-                                    <expression>find(/heduoduo_test/tdsql.get_value[2,{#TXSQL_NAME},backup_monitor_xtrabckup],1h,&quot;like&quot;,&quot;-1&quot;) = 1</expression>
+                                    <expression>find(/fm_tdsql/tdsql.get_value[2,{#TXSQL_NAME},backup_monitor_xtrabckup],12h,&quot;like&quot;,&quot;-1&quot;) = 1</expression>
                                     <name>TDSQL{#DESC} txsql({#TXSQL_NAME})xtrabackup备份异常</name>
-                                    <priority>INFO</priority>
+                                    <priority>WARNING</priority>
                                 </trigger_prototype>
                             </trigger_prototypes>
                         </item_prototype>
@@ -330,9 +330,9 @@
                             <trigger_prototypes>
                                 <trigger_prototype>
                                     <uuid>530cf70574b64ff08627f28195ff7687</uuid>
-                                    <expression>avg(/heduoduo_test/tdsql.get_value[2,{#TXSQL_NAME},binlog_dir_usage],5m) &gt; 85</expression>
+                                    <expression>avg(/fm_tdsql/tdsql.get_value[2,{#TXSQL_NAME},binlog_dir_usage],5m) &gt; 85</expression>
                                     <name>TDSQL{#DESC} txsql({#TXSQL_NAME})日志盘使用率高</name>
-                                    <priority>INFO</priority>
+                                    <priority>AVERAGE</priority>
                                 </trigger_prototype>
                             </trigger_prototypes>
                         </item_prototype>
@@ -366,9 +366,9 @@
                             <trigger_prototypes>
                                 <trigger_prototype>
                                     <uuid>2857ff005e4b4050a000df03175952ea</uuid>
-                                    <expression>avg(/heduoduo_test/tdsql.get_value[2,{#TXSQL_NAME},connect_usage],5m) &gt; 85</expression>
+                                    <expression>avg(/fm_tdsql/tdsql.get_value[2,{#TXSQL_NAME},connect_usage],5m) &gt; 85</expression>
                                     <name>TDSQL{#DESC} txsql({#TXSQL_NAME})连接数使用率高</name>
-                                    <priority>INFO</priority>
+                                    <priority>AVERAGE</priority>
                                 </trigger_prototype>
                             </trigger_prototypes>
                         </item_prototype>
@@ -380,9 +380,9 @@
                             <trigger_prototypes>
                                 <trigger_prototype>
                                     <uuid>3074713b73a94a4e8a1fb041d9e0cec0</uuid>
-                                    <expression>avg(/heduoduo_test/tdsql.get_value[2,{#TXSQL_NAME},conn_active],5m) &gt; 100</expression>
+                                    <expression>avg(/fm_tdsql/tdsql.get_value[2,{#TXSQL_NAME},conn_active],5m) &gt; 100</expression>
                                     <name>TDSQL{#DESC} txsql({#TXSQL_NAME})活跃连接数高</name>
-                                    <priority>INFO</priority>
+                                    <priority>AVERAGE</priority>
                                 </trigger_prototype>
                             </trigger_prototypes>
                         </item_prototype>
@@ -396,9 +396,9 @@
                             <trigger_prototypes>
                                 <trigger_prototype>
                                     <uuid>31dae961e32a459c890316ee1a3ed7ed</uuid>
-                                    <expression>count(/heduoduo_test/tdsql.get_value[2,{#TXSQL_NAME},conn_err_save],5m,&quot;ne&quot;,0) &gt; 0</expression>
+                                    <expression>count(/fm_tdsql/tdsql.get_value[2,{#TXSQL_NAME},conn_err_save],5m,&quot;ne&quot;,0) &gt; 0</expression>
                                     <name>TDSQL{#DESC} txsql({#TXSQL_NAME})TCP连接状态异常</name>
-                                    <priority>INFO</priority>
+                                    <priority>HIGH</priority>
                                 </trigger_prototype>
                             </trigger_prototypes>
                         </item_prototype>
@@ -447,9 +447,9 @@
                             <trigger_prototypes>
                                 <trigger_prototype>
                                     <uuid>9f626c4348c24928a6bb20bb158cd53e</uuid>
-                                    <expression>avg(/heduoduo_test/tdsql.get_value[2,{#TXSQL_NAME},data_dir_usage],5m) &gt; 85</expression>
+                                    <expression>avg(/fm_tdsql/tdsql.get_value[2,{#TXSQL_NAME},data_dir_usage],5m) &gt; 85</expression>
                                     <name>TDSQL{#DESC} txsql({#TXSQL_NAME})数据盘使用率高</name>
-                                    <priority>INFO</priority>
+                                    <priority>AVERAGE</priority>
                                 </trigger_prototype>
                             </trigger_prototypes>
                         </item_prototype>
@@ -473,9 +473,9 @@
                             <trigger_prototypes>
                                 <trigger_prototype>
                                     <uuid>658161b4d9614f18bc756c695d000d09</uuid>
-                                    <expression>find(/heduoduo_test/tdsql.get_value[2,{#TXSQL_NAME},gtidIsSame],30m,&quot;eq&quot;,0) = 1</expression>
+                                    <expression>find(/fm_tdsql/tdsql.get_value[2,{#TXSQL_NAME},gtidIsSame],30m,&quot;eq&quot;,0) = 1</expression>
                                     <name>TDSQL{#DESC} txsql({#TXSQL_NAME})GTID不一致</name>
-                                    <priority>INFO</priority>
+                                    <priority>AVERAGE</priority>
                                 </trigger_prototype>
                             </trigger_prototypes>
                         </item_prototype>
@@ -483,15 +483,15 @@
                             <uuid>9231904be3b24c2fba27c72278acd0ae</uuid>
                             <name>{#DESC}/{#TXSQL_NAME}(txsql iodelay)</name>
                             <key>tdsql.get_value[2,{#TXSQL_NAME},iodelay]</key>
-                            <discover>NO_DISCOVER</discover>
+                            <delay>30s</delay>
                             <units>ms</units>
                             <description>I/O延迟</description>
                             <trigger_prototypes>
                                 <trigger_prototype>
                                     <uuid>eeb692882480419c9ed7768b69e93e08</uuid>
-                                    <expression>avg(/heduoduo_test/tdsql.get_value[2,{#TXSQL_NAME},iodelay],5m) &gt; 50</expression>
+                                    <expression>avg(/fm_tdsql/tdsql.get_value[2,{#TXSQL_NAME},iodelay],5m) &gt; 50</expression>
                                     <name>TDSQL{#DESC} txsql({#TXSQL_NAME})IO延迟高</name>
-                                    <priority>INFO</priority>
+                                    <priority>AVERAGE</priority>
                                 </trigger_prototype>
                             </trigger_prototypes>
                         </item_prototype>
@@ -500,13 +500,14 @@
                             <name>{#DESC}/{#TXSQL_NAME}(txsql io_usage)</name>
                             <key>tdsql.get_value[2,{#TXSQL_NAME},io_usage]</key>
                             <delay>2m</delay>
+                            <discover>NO_DISCOVER</discover>
                             <value_type>FLOAT</value_type>
                             <units>%</units>
                             <description>I/O使用率</description>
                             <trigger_prototypes>
                                 <trigger_prototype>
                                     <uuid>91c5fe96f198494fafc51d74c2031193</uuid>
-                                    <expression>avg(/heduoduo_test/tdsql.get_value[2,{#TXSQL_NAME},io_usage],5m) &gt; 80</expression>
+                                    <expression>avg(/fm_tdsql/tdsql.get_value[2,{#TXSQL_NAME},io_usage],5m) &gt; 80</expression>
                                     <name>TDSQL{#DESC} txsql({#TXSQL_NAME})磁盘I/O使用率高</name>
                                     <priority>INFO</priority>
                                 </trigger_prototype>
@@ -534,9 +535,9 @@
                             <trigger_prototypes>
                                 <trigger_prototype>
                                     <uuid>b117f086fa5f456a833ab631cb2cca70</uuid>
-                                    <expression>find(/heduoduo_test/tdsql.get_value[2,{#TXSQL_NAME},is_notsame],30m,&quot;like&quot;,&quot;false&quot;) = 1 and last(/heduoduo_test/tdsql.get_value[2,{#TXSQL_NAME},is_notsame]) = &quot;true&quot;</expression>
+                                    <expression>find(/fm_tdsql/tdsql.get_value[2,{#TXSQL_NAME},is_notsame],30m,&quot;like&quot;,&quot;false&quot;) = 1 and last(/fm_tdsql/tdsql.get_value[2,{#TXSQL_NAME},is_notsame]) = &quot;true&quot;</expression>
                                     <name>TDSQL{#DESC} txsql({#TXSQL_NAME})发生重启</name>
-                                    <priority>INFO</priority>
+                                    <priority>HIGH</priority>
                                 </trigger_prototype>
                             </trigger_prototypes>
                         </item_prototype>
@@ -561,9 +562,9 @@
                             <trigger_prototypes>
                                 <trigger_prototype>
                                     <uuid>2b800a5ce4a0445885e2c4bbb1a8de03</uuid>
-                                    <expression>avg(/heduoduo_test/tdsql.get_value[2,{#TXSQL_NAME},mem_usage],5m) &gt; 95</expression>
+                                    <expression>avg(/fm_tdsql/tdsql.get_value[2,{#TXSQL_NAME},mem_usage],5m) &gt; 95</expression>
                                     <name>TDSQL{#DESC} txsql({#TXSQL_NAME})内存使用率高</name>
-                                    <priority>INFO</priority>
+                                    <priority>WARNING</priority>
                                 </trigger_prototype>
                             </trigger_prototypes>
                         </item_prototype>
@@ -589,24 +590,9 @@
                             <trigger_prototypes>
                                 <trigger_prototype>
                                     <uuid>b0f541d8755643b1864ce385f58d49b6</uuid>
-                                    <expression>now() - last(/heduoduo_test/tdsql.get_value[2,{#TXSQL_NAME},mtime]) &gt; 600</expression>
+                                    <expression>now() - last(/fm_tdsql/tdsql.get_value[2,{#TXSQL_NAME},mtime]) &gt; 600</expression>
                                     <name>TDSQL{#DESC} txsql({#TXSQL_NAME})监控指标上报延迟</name>
-                                    <priority>INFO</priority>
-                                </trigger_prototype>
-                            </trigger_prototypes>
-                        </item_prototype>
-                        <item_prototype>
-                            <uuid>94d936e9e94e47e698ddcadc5d4cb8f8</uuid>
-                            <name>{#DESC}/{#TXSQL_NAME}(txsql processlist_slow_sql)</name>
-                            <key>tdsql.get_value[2,{#TXSQL_NAME},processlist_slow_sql]</key>
-                            <delay>30s</delay>
-                            <description>当前PROCESSLIST中的慢查询数量</description>
-                            <trigger_prototypes>
-                                <trigger_prototype>
-                                    <uuid>1520293f60744546a1dc09f5f536c59c</uuid>
-                                    <expression>last(/heduoduo_test/tdsql.get_value[2,{#TXSQL_NAME},processlist_slow_sql]) &gt; 10</expression>
-                                    <name>TDSQL{#DESC} txsql({#TXSQL_NAME})PROCESSLIST中慢查询数量多</name>
-                                    <priority>INFO</priority>
+                                    <priority>WARNING</priority>
                                 </trigger_prototype>
                             </trigger_prototypes>
                         </item_prototype>
@@ -621,9 +607,9 @@
                             <trigger_prototypes>
                                 <trigger_prototype>
                                     <uuid>a23b9d04a7604735866e48119b3d9916</uuid>
-                                    <expression>last(/heduoduo_test/tdsql.get_value[2,{#TXSQL_NAME},process_fh_max]) &lt; 10000</expression>
+                                    <expression>last(/fm_tdsql/tdsql.get_value[2,{#TXSQL_NAME},process_fh_max]) &lt; 10000</expression>
                                     <name>TDSQL{#DESC} txsql({#TXSQL_NAME})DB进程文件句柄配置低</name>
-                                    <priority>INFO</priority>
+                                    <priority>WARNING</priority>
                                 </trigger_prototype>
                             </trigger_prototypes>
                         </item_prototype>
@@ -638,9 +624,9 @@
                             <trigger_prototypes>
                                 <trigger_prototype>
                                     <uuid>7ff3a851fa734027bff69e10a3838fea</uuid>
-                                    <expression>avg(/heduoduo_test/tdsql.get_value[2,{#TXSQL_NAME},process_fh_usage],5m) &gt; 80</expression>
+                                    <expression>avg(/fm_tdsql/tdsql.get_value[2,{#TXSQL_NAME},process_fh_usage],5m) &gt; 80</expression>
                                     <name>TDSQL{#DESC} txsql({#TXSQL_NAME})文件句柄使用率高</name>
-                                    <priority>INFO</priority>
+                                    <priority>WARNING</priority>
                                 </trigger_prototype>
                             </trigger_prototypes>
                         </item_prototype>
@@ -680,9 +666,9 @@
                             <trigger_prototypes>
                                 <trigger_prototype>
                                     <uuid>7f08b115c9d44c6a9d4e6883a8a8be47</uuid>
-                                    <expression>avg(/heduoduo_test/tdsql.get_value[2,{#TXSQL_NAME},slave_delay],5m) &gt; 1800</expression>
+                                    <expression>avg(/fm_tdsql/tdsql.get_value[2,{#TXSQL_NAME},slave_delay],5m) &gt; 1800</expression>
                                     <name>TDSQL{#DESC} txsql({#TXSQL_NAME})主从复制延迟高</name>
-                                    <priority>INFO</priority>
+                                    <priority>WARNING</priority>
                                 </trigger_prototype>
                             </trigger_prototypes>
                         </item_prototype>
@@ -705,9 +691,9 @@
                             <trigger_prototypes>
                                 <trigger_prototype>
                                     <uuid>d3e3fbb4e4f348a5b3d90a240dc20fc0</uuid>
-                                    <expression>count(/heduoduo_test/tdsql.get_value[2,{#TXSQL_NAME},slave_io_running],10m,&quot;eq&quot;,0) &gt; 0</expression>
+                                    <expression>count(/fm_tdsql/tdsql.get_value[2,{#TXSQL_NAME},slave_io_running],10m,&quot;eq&quot;,0) &gt; 0</expression>
                                     <name>TDSQL{#DESC} txsql({#TXSQL_NAME})主从复制IO线程异常</name>
-                                    <priority>INFO</priority>
+                                    <priority>AVERAGE</priority>
                                 </trigger_prototype>
                             </trigger_prototypes>
                         </item_prototype>
@@ -730,9 +716,24 @@
                             <trigger_prototypes>
                                 <trigger_prototype>
                                     <uuid>57efbbffc4e34bf4b08a17d9e47e69a4</uuid>
-                                    <expression>count(/heduoduo_test/tdsql.get_value[2,{#TXSQL_NAME},slave_sql_running],10m,&quot;eq&quot;,0) &gt; 0</expression>
+                                    <expression>count(/fm_tdsql/tdsql.get_value[2,{#TXSQL_NAME},slave_sql_running],10m,&quot;eq&quot;,0) &gt; 0</expression>
                                     <name>TDSQL{#DESC} txsql({#TXSQL_NAME})主从复制SQL线程异常</name>
-                                    <priority>INFO</priority>
+                                    <priority>AVERAGE</priority>
+                                </trigger_prototype>
+                            </trigger_prototypes>
+                        </item_prototype>
+                        <item_prototype>
+                            <uuid>94d936e9e94e47e698ddcadc5d4cb8f8</uuid>
+                            <name>{#DESC}/{#TXSQL_NAME}(txsql slow_query)</name>
+                            <key>tdsql.get_value[2,{#TXSQL_NAME},slow_query]</key>
+                            <delay>30s</delay>
+                            <description>当前PROCESSLIST中的慢查询数量</description>
+                            <trigger_prototypes>
+                                <trigger_prototype>
+                                    <uuid>1520293f60744546a1dc09f5f536c59c</uuid>
+                                    <expression>avg(/fm_tdsql/tdsql.get_value[2,{#TXSQL_NAME},slow_query],2m) &gt; 300</expression>
+                                    <name>TDSQL{#DESC} txsql({#TXSQL_NAME})慢查询数量多</name>
+                                    <priority>WARNING</priority>
                                 </trigger_prototype>
                             </trigger_prototypes>
                         </item_prototype>
@@ -747,9 +748,9 @@
                             <trigger_prototypes>
                                 <trigger_prototype>
                                     <uuid>eee6a9d543b342a9a972e5a242c0e525</uuid>
-                                    <expression>avg(/heduoduo_test/tdsql.get_value[2,{#TXSQL_NAME},slow_query_rate],5m) &gt; 20</expression>
+                                    <expression>avg(/fm_tdsql/tdsql.get_value[2,{#TXSQL_NAME},slow_query_rate],5m) &gt; 20</expression>
                                     <name>TDSQL{#DESC} txsql({#TXSQL_NAME})慢查询比率高</name>
-                                    <priority>INFO</priority>
+                                    <priority>WARNING</priority>
                                 </trigger_prototype>
                             </trigger_prototypes>
                         </item_prototype>
@@ -764,9 +765,9 @@
                             <trigger_prototypes>
                                 <trigger_prototype>
                                     <uuid>adffe752ffae4bb6803c546585219ef0</uuid>
-                                    <expression>find(/heduoduo_test/tdsql.get_value[2,{#TXSQL_NAME},sqlasyn_state],30m,&quot;like&quot;,&quot;false&quot;) = 1</expression>
+                                    <expression>find(/fm_tdsql/tdsql.get_value[2,{#TXSQL_NAME},sqlasyn_state],30m,&quot;like&quot;,&quot;false&quot;) = 1</expression>
                                     <name>TDSQL{#DESC} txsql({#TXSQL_NAME})强同步状态异常</name>
-                                    <priority>INFO</priority>
+                                    <priority>AVERAGE</priority>
                                 </trigger_prototype>
                             </trigger_prototypes>
                         </item_prototype>
@@ -779,9 +780,9 @@
                             <trigger_prototypes>
                                 <trigger_prototype>
                                     <uuid>163434637d2b468092ad4f69abf1b8f8</uuid>
-                                    <expression>avg(/heduoduo_test/tdsql.get_value[2,{#TXSQL_NAME},waiting_thread_count],5m) &gt; 50</expression>
+                                    <expression>avg(/fm_tdsql/tdsql.get_value[2,{#TXSQL_NAME},waiting_thread_count],5m) &gt; 50</expression>
                                     <name>TDSQL{#DESC} txsql({#TXSQL_NAME})等待线程数高</name>
-                                    <priority>INFO</priority>
+                                    <priority>WARNING</priority>
                                 </trigger_prototype>
                             </trigger_prototypes>
                         </item_prototype>
@@ -789,9 +790,9 @@
                     <trigger_prototypes>
                         <trigger_prototype>
                             <uuid>df64311934f8462888ade408f53d1858</uuid>
-                            <expression>avg(/heduoduo_test/tdsql.get_value[2,{#TXSQL_NAME},cpu_usage],5m) / avg(/heduoduo_test/tdsql.get_value[1,{#INSTANCE_NAME},oss_cpu,{#TXSQL_NAME}],5m) &gt; 0.9</expression>
+                            <expression>avg(/fm_tdsql/tdsql.get_value[2,{#TXSQL_NAME},cpu_usage],5m) / last(/fm_tdsql/tdsql.get_value[1,{#INSTANCE_NAME},oss_cpu,{#TXSQL_NAME}]) &gt; 0.9</expression>
                             <name>TDSQL{#DESC} txsql({#TXSQL_NAME})CPU使用率高</name>
-                            <priority>INFO</priority>
+                            <priority>WARNING</priority>
                         </trigger_prototype>
                     </trigger_prototypes>
                 </discovery_rule>
@@ -814,9 +815,9 @@
                             <trigger_prototypes>
                                 <trigger_prototype>
                                     <uuid>b2229354a6d34e6b8a1d950e07573dd8</uuid>
-                                    <expression>find(/heduoduo_test/tdsql.get_value[3,{#PROXY_NAME},alive],5m,&quot;like&quot;,&quot;false&quot;) = 1</expression>
+                                    <expression>find(/fm_tdsql/tdsql.get_value[3,{#PROXY_NAME},alive],5m,&quot;like&quot;,&quot;false&quot;) = 1</expression>
                                     <name>TDSQL{#DESC} proxy({#PROXY_NAME})存活状态异常</name>
-                                    <priority>INFO</priority>
+                                    <priority>DISASTER</priority>
                                 </trigger_prototype>
                             </trigger_prototypes>
                         </item_prototype>
@@ -856,9 +857,9 @@
                             <trigger_prototypes>
                                 <trigger_prototype>
                                     <uuid>f6cdfb9f3d774553a7ea1e75e7f94343</uuid>
-                                    <expression>avg(/heduoduo_test/tdsql.get_value[3,{#PROXY_NAME},conn_usage],5m) &gt; 80</expression>
+                                    <expression>avg(/fm_tdsql/tdsql.get_value[3,{#PROXY_NAME},conn_usage],5m) &gt; 80</expression>
                                     <name>TDSQL{#DESC} proxy({#PROXY_NAME})连接数使用率高</name>
-                                    <priority>INFO</priority>
+                                    <priority>WARNING</priority>
                                 </trigger_prototype>
                             </trigger_prototypes>
                         </item_prototype>
@@ -896,9 +897,9 @@
                             <trigger_prototypes>
                                 <trigger_prototype>
                                     <uuid>c568e8edda784a53aa9709f26675fe03</uuid>
-                                    <expression>now() - last(/heduoduo_test/tdsql.get_value[3,{#PROXY_NAME},mtime]) &gt; 600</expression>
+                                    <expression>now() - last(/fm_tdsql/tdsql.get_value[3,{#PROXY_NAME},mtime]) &gt; 600</expression>
                                     <name>TDSQL{#DESC} proxy({#PROXY_NAME})监控指标上报延迟</name>
-                                    <priority>INFO</priority>
+                                    <priority>WARNING</priority>
                                 </trigger_prototype>
                             </trigger_prototypes>
                         </item_prototype>
@@ -920,9 +921,9 @@
                             <trigger_prototypes>
                                 <trigger_prototype>
                                     <uuid>653533613c114feeaf6c0a7824de114c</uuid>
-                                    <expression>avg(/heduoduo_test/tdsql.get_value[3,{#PROXY_NAME},proxy_cpu_usage],5m) &gt; 80</expression>
+                                    <expression>avg(/fm_tdsql/tdsql.get_value[3,{#PROXY_NAME},proxy_cpu_usage],5m) &gt; 80</expression>
                                     <name>TDSQL{#DESC} proxy({#PROXY_NAME})CPU使用率高</name>
-                                    <priority>INFO</priority>
+                                    <priority>WARNING</priority>
                                 </trigger_prototype>
                             </trigger_prototypes>
                         </item_prototype>
@@ -936,9 +937,9 @@
                             <trigger_prototypes>
                                 <trigger_prototype>
                                     <uuid>c0dc7f072ee14f9ebec242b5246580bd</uuid>
-                                    <expression>count(/heduoduo_test/tdsql.get_value[3,{#PROXY_NAME},proxy_is_restart],30m,&quot;ne&quot;,0) &gt; 0</expression>
+                                    <expression>count(/fm_tdsql/tdsql.get_value[3,{#PROXY_NAME},proxy_is_restart],30m,&quot;ne&quot;,0) &gt; 0</expression>
                                     <name>TDSQL{#DESC} proxy({#PROXY_NAME})发生重启</name>
-                                    <priority>INFO</priority>
+                                    <priority>HIGH</priority>
                                 </trigger_prototype>
                             </trigger_prototypes>
                         </item_prototype>
@@ -978,9 +979,9 @@
                             <trigger_prototypes>
                                 <trigger_prototype>
                                     <uuid>197c6734d05c4bddba568a3a6a1e4c94</uuid>
-                                    <expression>find(/heduoduo_test/tdsql.get_value[4,{#ZKNODE_NAME},alive],5m,&quot;like&quot;,&quot;false&quot;) = 1</expression>
+                                    <expression>find(/fm_tdsql/tdsql.get_value[4,{#ZKNODE_NAME},alive],5m,&quot;like&quot;,&quot;false&quot;) = 1</expression>
                                     <name>TDSQL zookeeper({#ZKNODE_NAME})存活状态异常</name>
-                                    <priority>INFO</priority>
+                                    <priority>DISASTER</priority>
                                 </trigger_prototype>
                             </trigger_prototypes>
                         </item_prototype>
@@ -994,9 +995,9 @@
                             <trigger_prototypes>
                                 <trigger_prototype>
                                     <uuid>fd00c334458443c9b2da0da1b3deceab</uuid>
-                                    <expression>count(/heduoduo_test/tdsql.get_value[4,{#ZKNODE_NAME},master_switch],30m,&quot;ne&quot;,0) &gt; 0</expression>
+                                    <expression>count(/fm_tdsql/tdsql.get_value[4,{#ZKNODE_NAME},master_switch],30m,&quot;ne&quot;,0) &gt; 0</expression>
                                     <name>TDSQL zookeeper({#ZKNODE_NAME})发生leader切换</name>
-                                    <priority>INFO</priority>
+                                    <priority>AVERAGE</priority>
                                 </trigger_prototype>
                             </trigger_prototypes>
                         </item_prototype>
@@ -1023,9 +1024,9 @@
                             <trigger_prototypes>
                                 <trigger_prototype>
                                     <uuid>aeebbc6556f847f2b6505933e93e5582</uuid>
-                                    <expression>now() - last(/heduoduo_test/tdsql.get_value[4,{#ZKNODE_NAME},mtime]) &gt; 600</expression>
+                                    <expression>now() - last(/fm_tdsql/tdsql.get_value[4,{#ZKNODE_NAME},mtime]) &gt; 600</expression>
                                     <name>TDSQL zookeeper({#ZKNODE_NAME})监控指标上报延迟</name>
-                                    <priority>INFO</priority>
+                                    <priority>WARNING</priority>
                                 </trigger_prototype>
                             </trigger_prototypes>
                         </item_prototype>
@@ -1041,9 +1042,9 @@
                             <trigger_prototypes>
                                 <trigger_prototype>
                                     <uuid>90b61623c0de4fc1a73e2ec4c3170113</uuid>
-                                    <expression>avg(/heduoduo_test/tdsql.get_value[4,{#ZKNODE_NAME},zk_avg_latency],5m) &gt; 10</expression>
+                                    <expression>avg(/fm_tdsql/tdsql.get_value[4,{#ZKNODE_NAME},zk_avg_latency],5m) &gt; 10</expression>
                                     <name>TDSQL zookeeper({#ZKNODE_NAME})请求响应延迟过高</name>
-                                    <priority>INFO</priority>
+                                    <priority>WARNING</priority>
                                 </trigger_prototype>
                             </trigger_prototypes>
                         </item_prototype>
@@ -1105,9 +1106,9 @@
                             <trigger_prototypes>
                                 <trigger_prototype>
                                     <uuid>750155d4794f4dd2b72e50e31e354ce1</uuid>
-                                    <expression>count(/heduoduo_test/tdsql.get_value[11,{#SCHEDULER_NAME},checkheartbeat],5m,&quot;ne&quot;,1) &gt; 0</expression>
+                                    <expression>count(/fm_tdsql/tdsql.get_value[11,{#SCHEDULER_NAME},checkheartbeat],5m,&quot;ne&quot;,1) &gt; 0</expression>
                                     <name>TDSQL scheduler({#SCHEDULER_NAME})主scheduler心跳异常(不存活)</name>
-                                    <priority>INFO</priority>
+                                    <priority>DISASTER</priority>
                                 </trigger_prototype>
                             </trigger_prototypes>
                         </item_prototype>
@@ -1123,9 +1124,9 @@
                             <trigger_prototypes>
                                 <trigger_prototype>
                                     <uuid>de952e90dd584df4be4b5a6f07127468</uuid>
-                                    <expression>now() - last(/heduoduo_test/tdsql.get_value[11,{#SCHEDULER_NAME},mtime]) &gt; 600</expression>
+                                    <expression>now() - last(/fm_tdsql/tdsql.get_value[11,{#SCHEDULER_NAME},mtime]) &gt; 600</expression>
                                     <name>TDSQL scheduler({#SCHEDULER_NAME})监控指标上报延迟</name>
-                                    <priority>INFO</priority>
+                                    <priority>WARNING</priority>
                                 </trigger_prototype>
                             </trigger_prototypes>
                         </item_prototype>
@@ -1139,9 +1140,9 @@
                             <trigger_prototypes>
                                 <trigger_prototype>
                                     <uuid>17d794e9364147ef84d1f952c12ec513</uuid>
-                                    <expression>count(/heduoduo_test/tdsql.get_value[11,{#SCHEDULER_NAME},scheduler_alive],5m,&quot;ne&quot;,0) &gt; 0</expression>
+                                    <expression>count(/fm_tdsql/tdsql.get_value[11,{#SCHEDULER_NAME},scheduler_alive],5m,&quot;ne&quot;,0) &gt; 0</expression>
                                     <name>TDSQL scheduler({#SCHEDULER_NAME})存活状态异常</name>
-                                    <priority>INFO</priority>
+                                    <priority>DISASTER</priority>
                                 </trigger_prototype>
                             </trigger_prototypes>
                         </item_prototype>
@@ -1155,9 +1156,9 @@
                             <trigger_prototypes>
                                 <trigger_prototype>
                                     <uuid>4ca04abe9d72457d937e02193fc84404</uuid>
-                                    <expression>count(/heduoduo_test/tdsql.get_value[11,{#SCHEDULER_NAME},scheduler_distance_id],30m,&quot;ne&quot;,0) &gt; 0</expression>
+                                    <expression>count(/fm_tdsql/tdsql.get_value[11,{#SCHEDULER_NAME},scheduler_distance_id],30m,&quot;ne&quot;,0) &gt; 0</expression>
                                     <name>TDSQL scheduler({#SCHEDULER_NAME})发生重启</name>
-                                    <priority>INFO</priority>
+                                    <priority>HIGH</priority>
                                 </trigger_prototype>
                             </trigger_prototypes>
                         </item_prototype>
@@ -1180,9 +1181,9 @@
                             <trigger_prototypes>
                                 <trigger_prototype>
                                     <uuid>61a8305544c24f9da001f84740a9341e</uuid>
-                                    <expression>count(/heduoduo_test/tdsql.get_value[21,{#ONLINEDDL_NAME},alive],30m,&quot;ne&quot;,1)&gt;0</expression>
+                                    <expression>count(/fm_tdsql/tdsql.get_value[21,{#ONLINEDDL_NAME},alive],30m,&quot;ne&quot;,1)&gt;0</expression>
                                     <name>TDSQL onlineddl({#ONLINEDDL_NAME})存活状态异常</name>
-                                    <priority>INFO</priority>
+                                    <priority>DISASTER</priority>
                                 </trigger_prototype>
                             </trigger_prototypes>
                         </item_prototype>
@@ -1198,9 +1199,9 @@
                             <trigger_prototypes>
                                 <trigger_prototype>
                                     <uuid>c5acd65a65f34a11ac57d41fdfb5377d</uuid>
-                                    <expression>now() - last(/heduoduo_test/tdsql.get_value[21,{#ONLINEDDL_NAME},mtime]) &gt; 600</expression>
+                                    <expression>now() - last(/fm_tdsql/tdsql.get_value[21,{#ONLINEDDL_NAME},mtime]) &gt; 600</expression>
                                     <name>TDSQL onlineddl({#ONLINEDDL_NAME})监控指标上报延迟</name>
-                                    <priority>INFO</priority>
+                                    <priority>WARNING</priority>
                                 </trigger_prototype>
                             </trigger_prototypes>
                         </item_prototype>
