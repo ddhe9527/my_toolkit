@@ -158,7 +158,7 @@ then
             VAL=`cat ${!JSON_FILE_VAR} | jq ".data[] | select((.mid == \"$MID_NAME\") and (.mkey == \"$ITEM_NAME\") $JQ_STR) | .mval" | sed 's/^"//g' | sed 's/"$//g'`
 
             ## if $VAL is datetime(YYYY-MM-DD HH:MM:SS), convert it into unix-timestamp
-            if [ `echo $VAL | grep -E '^([0-9]{4})-?(1[0-2]|0[1-9])-?(3[01]|0[1-9]|[12][0-9]) (2[0-3]|[01][0-9]):?([0-5][0-9]):?([0-5][0-9])$' | wc -L` -eq 0 ]
+            if [ `echo $VAL | grep -E '^([0-9]{4})-?(1[0-2]|0[1-9])-?(3[01]|0[1-9]|[12][0-9]) (2[0-3]|[01][0-9]):?([0-5][0-9]):?([0-5][0-9])$' | wc -l` -eq 0 ]
             then
                 echo $VAL
             else
