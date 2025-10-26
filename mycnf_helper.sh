@@ -877,9 +877,9 @@ OS_GLIBC_VERSION=`getconf GNU_LIBC_VERSION | awk '{print $2}'`
 
 if [ $OS_VER_NUM -lt 8 ]
 then
-    yum install -y bc net-tools libaio libaio-devel numactl-libs ncurses-compat-libs numactl autoconf xz perl-Module* ntp &>>$ERR_FILE
+    yum install -y tar bc net-tools libaio libaio-devel numactl-libs ncurses-compat-libs numactl autoconf xz perl-DBI perl-DBD-MySQL ntp &>>$ERR_FILE
 else
-    yum install -y bc net-tools libaio libaio-devel numactl-libs ncurses-compat-libs numactl autoconf xz perl-Module* &>>$ERR_FILE
+    yum install -y tar bc net-tools libaio libaio-devel numactl-libs ncurses-compat-libs numactl autoconf xz perl-DBI perl-DBD-MySQL &>>$ERR_FILE
 fi
 
 if [ $? -eq 1 ]
